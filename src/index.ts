@@ -47,12 +47,24 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     // In a real implementation, this would redirect to a login page
     // For our simple implementation, we'll just return a dummy code
     
+    // Log all request details for debugging
+    console.log("Authorization request received:", {
+      url: request.url,
+      headers: Object.fromEntries([...request.headers.entries()]),
+      params: Object.fromEntries([...url.searchParams.entries()])
+    });
+    
     // Get the redirect_uri from the query parameters
     const redirectUri = url.searchParams.get('redirect_uri');
     const state = url.searchParams.get('state');
     const codeChallenge = url.searchParams.get('code_challenge');
+    const clientId = url.searchParams.get('client_id');
+    const responseType = url.searchParams.get('response_type');
+    
+    console.log("OAuth params:", { redirectUri, state, codeChallenge, clientId, responseType });
     
     if (!redirectUri) {
+      console.log("Error: Missing redirect_uri parameter");
       return new Response('Missing redirect_uri parameter', { status: 400 });
     }
     
@@ -80,6 +92,29 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // OAuth Token Endpoint
   if (url.pathname === '/oauth/token' && request.method === 'POST') {
     try {
+      // Log token request details
+      console.log("Token request received:", {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries([...request.headers.entries()])
+      });
+      
+      // Parse the request body
+      const contentType = request.headers.get('content-type') || '';
+      let requestBody;
+      
+      if (contentType.includes('application/json')) {
+        requestBody = await request.json();
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
+        const formData = await request.formData();
+        requestBody = Object.fromEntries(formData);
+      } else {
+        // Try to read as text
+        requestBody = await request.text();
+      }
+      
+      console.log("Token request body:", requestBody);
+      
       // We'll just return a dummy token without validating anything
       const dummyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkdW1teV91c2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.KobkNJNvj7jQWl3eri54FfRh1TvEQrqNlCaeXLMlqpE';
       
@@ -119,10 +154,18 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   
   // Handle MCP requests
   if (url.pathname === '/mcp') {
+    console.log("MCP request received:", {
+      method: request.method,
+      url: request.url,
+      headers: Object.fromEntries([...request.headers.entries()])
+    });
+    
     // Handle GET requests for streaming connections
     if (request.method === 'GET') {
       // Check if this is a server-sent events request
       const acceptHeader = request.headers.get('accept');
+      console.log("MCP GET request with Accept header:", acceptHeader);
+      
       if (acceptHeader && acceptHeader.includes('text/event-stream')) {
         // This is an SSE connection request
         const responseStream = new ReadableStream({
@@ -192,6 +235,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       
       // Check if this is an authentication request
       if (requestBody?.type === "auth_request") {
+        console.log("MCP Authentication request received:", requestBody);
+        
         // Handle MCP authentication request
         const responseBody = {
           version: "v1",
@@ -200,6 +245,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
             type: "none" // No authentication required
           }
         };
+        
+        console.log("Sending auth response:", responseBody);
         
         // Return authentication response
         return new Response(JSON.stringify(responseBody), {
