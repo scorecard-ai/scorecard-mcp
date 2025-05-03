@@ -54,7 +54,77 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       const requestBody = await request.json();
       console.log("Received MCP request:", JSON.stringify(requestBody));
       
-      // Extract the tool name and parameters from the request
+      // Check if this is an authentication request
+      if (requestBody?.type === "auth_request") {
+        // Handle MCP authentication request
+        const responseBody = {
+          version: "v1",
+          type: "auth_response",
+          auth_response: {
+            type: "none" // No authentication required
+          }
+        };
+        
+        // Return authentication response
+        return new Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Check if this is an introspection request
+      if (requestBody?.request?.type === "introspect") {
+        // Return a list of available tools
+        const responseBody = {
+          version: "v1",
+          type: "response",
+          response: {
+            type: "success",
+            success: {
+              tools: [
+                {
+                  name: "get_projects",
+                  description: "Get all projects from Scorecard",
+                  input_schema: {},
+                  authentication: {
+                    type: "none"
+                  }
+                },
+                {
+                  name: "get_records",
+                  description: "Get records from Scorecard",
+                  input_schema: {
+                    type: "object",
+                    properties: {
+                      project_id: {
+                        type: "string",
+                        description: "The ID of the project"
+                      }
+                    }
+                  },
+                  authentication: {
+                    type: "none"
+                  }
+                }
+              ]
+            }
+          }
+        };
+        
+        // Return introspection response
+        return new Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // For tool invocation requests
       const toolName = requestBody?.request?.invoke?.tool;
       const toolParams = requestBody?.request?.invoke?.parameters || {};
       
