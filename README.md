@@ -48,3 +48,10 @@ Update with this configuration:
 ```
 
 Restart Claude and you should see the tools become available. 
+
+## Local Development
+
+Create file ".dev.vars" and add:
+```bash
+SCORECARD_API_KEY=<API KEY FOR LOCAL TESTING>
+```
