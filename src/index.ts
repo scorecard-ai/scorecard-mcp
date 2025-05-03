@@ -118,7 +118,60 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   }
   
   // Handle MCP requests
-  if (url.pathname === '/mcp' && request.method === 'POST') {
+  if (url.pathname === '/mcp') {
+    // Handle GET requests for streaming connections
+    if (request.method === 'GET') {
+      // Check if this is a server-sent events request
+      const acceptHeader = request.headers.get('accept');
+      if (acceptHeader && acceptHeader.includes('text/event-stream')) {
+        // This is an SSE connection request
+        const responseStream = new ReadableStream({
+          start(controller) {
+            // Send an initial message
+            const initialMessage = `event: ready\ndata: {"status":"connected"}\n\n`;
+            controller.enqueue(new TextEncoder().encode(initialMessage));
+            
+            // Keep the connection alive
+            const interval = setInterval(() => {
+              controller.enqueue(new TextEncoder().encode(': ping\n\n'));
+            }, 30000);
+            
+            // Clean up when the connection closes
+            const cleanup = () => {
+              clearInterval(interval);
+            };
+            
+            // Return a cleanup function
+            return cleanup;
+          }
+        });
+        
+        return new Response(responseStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Regular GET request (not SSE)
+      return new Response(JSON.stringify({
+        version: "v1",
+        status: "ready",
+        message: "MCP server is ready. Use POST for MCP requests."
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+    
+    // Continue with POST handling
+    if (request.method === 'POST') {
     try {
       // Initialize the MCP server with token directly
       const TOKEN = "***REMOVED***.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiYXpwIjoiaHR0cHM6Ly9hcHAuZ2V0c2NvcmVjYXJkLmFpIiwiZW1haWwiOiJkYXJlQHNjb3JlY2FyZC5pbyIsImV4cCI6MjAwNTQ5NzEzMCwiaWF0IjoxNzQ2Mjk3MTMwLCJpc3MiOiJodHRwczovL2NsZXJrLmdldHNjb3JlY2FyZC5haSIsImp0aSI6IjJlY2FkYjc5NjQ0MzU5YmIxNjBlIiwibmJmIjoxNzQ2Mjk3MTI1LCJvcmdfaWQiOiJvcmdfMndiM0h3cDRJZ1lSUVZRUjB2RFB5VG9rbDZQIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJzdWIiOiJ1c2VyXzJYSU12NVlXRjk5dk5lT1J0dUdXbTJRcDE3VyJ9.DGgo1pY2USQ5JrDlehjG-If7-l5OZC1a0TKqUPtQeIA";
@@ -263,7 +316,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         }
       );
     }
-  }
+    } // End of POST block
+  } // End of /mcp block
   
   // 404 for all other routes
   return new Response('Not Found', { status: 404 });
