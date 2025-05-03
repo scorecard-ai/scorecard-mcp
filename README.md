@@ -69,7 +69,9 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 Once deployed, the MCP server can be used with Claude by adding it as an integration:
 
 1. From Claude's interface, select "Add MCP" from settings
-2. Enter the MCP server URL - you can use either:
+2. Enter the MCP server URL - you can use any of these endpoints:
+   
+   For OAuth authentication:
    ```
    https://scorecard-mcp.dare-d5b.workers.dev/mcp
    ```
@@ -77,7 +79,13 @@ Once deployed, the MCP server can be used with Claude by adding it as an integra
    ```
    https://scorecard-mcp.dare-d5b.workers.dev/sse
    ```
-3. For authentication, select "OAuth"
+   
+   For no authentication (simplified testing):
+   ```
+   https://scorecard-mcp.dare-d5b.workers.dev/mcp/no-auth
+   ```
+   
+3. For authentication, select "OAuth" if using /mcp or /sse, or "None" if using /mcp/no-auth
 4. Claude will discover the OAuth configuration from the server
 5. Complete the OAuth flow to authenticate with Scorecard
 6. Once connected, you can use the Scorecard tools in your conversations

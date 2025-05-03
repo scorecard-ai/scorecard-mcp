@@ -66,7 +66,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       },
       oauth: {
         ...serverConfig.oauth,
-        fullAuthorizationUrl: `${serverConfig.oauth.issuer}/oauth/authorize?client_id=${serverConfig.oauth.clientId}&redirect_uri=${encodeURIComponent(serverConfig.oauth.redirectUri)}&response_type=code&scope=profile%20email%20scorecard.api`
+        fullAuthorizationUrl: `${baseUrl}/oauth/authorize?client_id=${serverConfig.oauth.clientId}&redirect_uri=${encodeURIComponent(serverConfig.oauth.redirectUri)}&response_type=code&scope=profile%20email%20scorecard.api`
       },
       tools: Object.keys(toolsSchema).map(name => ({ 
         name, 
@@ -1162,8 +1162,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return handleStainlessTools(request, env);
   }
   
-  // Handle MCP requests - support both /mcp and /sse paths
-  if (url.pathname === '/mcp' || url.pathname === '/sse') {
+  // Handle MCP requests - support multiple paths
+  if (url.pathname === '/mcp' || url.pathname === '/sse' || url.pathname === '/mcp/no-auth') {
     // Log basic info to avoid cluttering logs
     console.log("MCP request received:", {
       method: request.method,
@@ -1227,11 +1227,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
             version: "v1",
             type: "auth_response",
             auth_response: {
-              type: "oauth",
-              status: "success",
-              oauth: {
-                server: `https://${request.headers.get('host') || "scorecard-mcp.dare-d5b.workers.dev"}`
-              }
+              type: "none", // Change to "none" for simpler testing
+              status: "success"
             }
           };
           
