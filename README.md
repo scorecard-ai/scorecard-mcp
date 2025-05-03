@@ -7,6 +7,8 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 - Implements the Scorecard MCP tools from the `scorecard-ai-mcp` package
 - Deployed as a Cloudflare Worker
 - Simple authentication via API key
+- TypeScript support for better type safety
+- CORS support for cross-origin requests
 
 ## Setup
 
@@ -20,7 +22,7 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 
 1. Clone this repository
    ```bash
-   git clone https://github.com/yourusername/scorecard-mcp.git
+   git clone https://github.com/scorecard-ai/scorecard-mcp.git
    cd scorecard-mcp
    ```
 
@@ -47,12 +49,12 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 
 ## Usage
 
-Once deployed, the MCP server can be used with Claude by adding it as an integration. The endpoint will be:
+Once deployed, the MCP server can be used with Claude by adding it as an integration. The endpoint is:
 
 ```
-https://scorecard-mcp.your-worker-subdomain.workers.dev/mcp
+https://scorecard-mcp.dare-d5b.workers.dev/mcp
 ```
 
 ## Development
 
-To update the MCP server configuration, modify the settings in `src/index.js`.
+To update the MCP server configuration, modify the settings in `src/index.ts`.
