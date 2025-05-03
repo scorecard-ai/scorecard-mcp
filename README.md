@@ -1,150 +1,50 @@
-# Scorecard MCP Server
+# Building a Remote MCP Server on Cloudflare (Without Auth)
 
-A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other AI assistants to interact with Scorecard data through the MCP protocol.
+This example allows you to deploy a remote MCP server that doesn't require authentication on Cloudflare Workers. 
 
-## Features
+## Get started: 
 
-- Implements the Scorecard MCP tools from the `scorecard-ai-mcp` package
-- Deployed as a Cloudflare Worker
-- Simple authentication via API key
-- TypeScript support for better type safety
-- CORS support for cross-origin requests
+[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/ai/tree/main/demos/remote-mcp-authless)
 
-## Setup
+This will deploy your MCP server to a URL like: `remote-mcp-server-authless.<your-account>.workers.dev/sse`
 
-### Prerequisites
-
-- Node.js and npm
-- Scorecard API access
-- Cloudflare account
-- Clerk account (for OAuth authentication)
-
-### Setting up Clerk OAuth (Optional)
-
-1. Create a Clerk account at https://clerk.dev
-2. In your Clerk Dashboard, navigate to "OAuth Applications"
-3. Create a new OAuth Application
-4. Set the redirect URI to the callback URL of your client application
-5. Copy the Client ID and Client Secret for use in the next steps
-
-### Installation
-
-1. Clone this repository
-   ```bash
-   git clone https://github.com/scorecard-ai/scorecard-mcp.git
-   cd scorecard-mcp
-   ```
-
-2. Install dependencies
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables and secrets
-   ```bash
-   # Add Scorecard API key
-   npx wrangler secret put SCORECARD_API_KEY
-   
-   # For Clerk OAuth (if used)
-   npx wrangler secret put CLERK_SECRET_KEY
-   npx wrangler secret put CLERK_PUBLISHABLE_KEY
-   npx wrangler secret put CLERK_OAUTH_CLIENT_ID
-   npx wrangler secret put CLERK_OAUTH_CLIENT_SECRET
-   ```
-
-4. Run locally
-   ```bash
-   npm run dev
-   ```
-
-5. Deploy to Cloudflare
-   ```bash
-   npm run deploy
-   ```
-
-## Usage
-
-### Using with Claude
-
-Once deployed, the MCP server can be used with Claude by adding it as an integration:
-
-1. From Claude's interface, select "Add MCP" from settings
-2. Enter the MCP server URL - you can use any of these endpoints:
-   
-   For OAuth authentication:
-   ```
-   https://scorecard-mcp.dare-d5b.workers.dev/mcp
-   ```
-   or
-   ```
-   https://scorecard-mcp.dare-d5b.workers.dev/sse
-   ```
-   
-   For no authentication (simplified testing):
-   ```
-   https://scorecard-mcp.dare-d5b.workers.dev/mcp/no-auth
-   ```
-   
-3. For authentication, select "OAuth" if using /mcp or /sse, or "None" if using /mcp/no-auth
-4. Claude will discover the OAuth configuration from the server
-5. Complete the OAuth flow to authenticate with Scorecard
-6. Once connected, you can use the Scorecard tools in your conversations
-
-### Debug Page
-
-To help troubleshoot and test the MCP server, use the debug page:
-
-```
-https://scorecard-mcp.dare-d5b.workers.dev/debug
+Alternatively, you can use the command line below to get the remote MCP Server created on your local machine:
+```bash
+npm create cloudflare@latest -- my-mcp-server --template=cloudflare/ai/demos/remote-mcp-authless
 ```
 
-This page provides:
-- Links to test all available endpoints
-- OAuth configuration and testing
-- Tool testing interface
-- SSE connection testing
+## Customizing your MCP Server
 
-### Testing OAuth Flow
+To add your own [tools](https://developers.cloudflare.com/agents/model-context-protocol/tools/) to the MCP server, define each tool inside the `init()` method of `src/index.ts` using `this.server.tool(...)`. 
 
-To test the OAuth flow before using it with Claude:
+## Connect to Cloudflare AI Playground
 
-1. Open the OAuth test client:
-   ```
-   https://scorecard-mcp.dare-d5b.workers.dev/test-oauth-flow.html
-   ```
-2. Follow the steps in the test client to:
-   - Discover the OAuth configuration
-   - Initiate the OAuth authorization flow
-   - Exchange the authorization code for a token
-   - Test authentication with the MCP server
-   - Introspect available tools
+You can connect to your MCP server from the Cloudflare AI Playground, which is a remote MCP client:
 
-### Available Tools
+1. Go to https://playground.ai.cloudflare.com/
+2. Enter your deployed MCP server URL (`remote-mcp-server-authless.<your-account>.workers.dev/sse`)
+3. You can now use your MCP tools directly from the playground!
 
-The Scorecard MCP server provides the following tools:
+## Connect Claude Desktop to your MCP server
 
-- `get_projects`: Returns a list of all projects in Scorecard
-- `get_records`: Returns records from a specific Scorecard project
+You can also connect to your remote MCP server from local MCP clients, by using the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote). 
 
-## Development
+To connect to your MCP server from Claude Desktop, follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config.
 
-To update the MCP server configuration, modify the settings in `src/index.ts`.
+Update with this configuration:
 
-### Local Development
+```json
+{
+  "mcpServers": {
+    "calculator": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:8787/sse"  // or remote-mcp-server-authless.your-account.workers.dev/sse
+      ]
+    }
+  }
+}
+```
 
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Create a `.dev.vars` file with required environment variables (see `.dev.vars.example`)
-4. Run locally with `npm run dev`
-
-### Deployment
-
-1. Deploy to Cloudflare Workers with `npm run deploy`
-2. Set required secrets with:
-   ```bash
-   npx wrangler secret put SCORECARD_API_KEY
-   npx wrangler secret put CLERK_SECRET_KEY
-   npx wrangler secret put CLERK_PUBLISHABLE_KEY
-   npx wrangler secret put CLERK_OAUTH_CLIENT_ID
-   npx wrangler secret put CLERK_OAUTH_CLIENT_SECRET
-   ```
+Restart Claude and you should see the tools become available. 

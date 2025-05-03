@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Generated Types
+*.d.ts
+
 # Build artifacts
 dist/
 .wrangler/
