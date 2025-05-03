@@ -1,6 +1,0 @@
-name = "scorecard-mcp"
-main = "src/index.ts"
-compatibility_date = "2024-05-01"
-
-# This will deploy to workers.dev by default
-# We can add custom domains later if needed

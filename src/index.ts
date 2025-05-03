@@ -1,88 +1,77 @@
-import { createServer } from 'scorecard-ai-mcp/server';
+import { McpAgent } from "agents/mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 
-// Define environment interface for our Cloudflare Worker
-export interface Env {
-  // Add your environment variables/secrets here
-  SCORECARD_API_KEY?: string;
+// Define our MCP agent with tools
+export class MyMCP extends McpAgent {
+	server = new McpServer({
+		name: "Authless Calculator",
+		version: "1.0.0",
+	});
+
+	async init() {
+		// Simple addition tool
+		this.server.tool(
+			"add",
+			{ a: z.number(), b: z.number() },
+			async ({ a, b }) => ({
+				content: [{ type: "text", text: String(a + b) }],
+			})
+		);
+
+		// Calculator tool with multiple operations
+		this.server.tool(
+			"calculate",
+			{
+				operation: z.enum(["add", "subtract", "multiply", "divide"]),
+				a: z.number(),
+				b: z.number(),
+			},
+			async ({ operation, a, b }) => {
+				let result: number;
+				switch (operation) {
+					case "add":
+						result = a + b;
+						break;
+					case "subtract":
+						result = a - b;
+						break;
+					case "multiply":
+						result = a * b;
+						break;
+					case "divide":
+						if (b === 0)
+							return {
+								content: [
+									{
+										type: "text",
+										text: "Error: Cannot divide by zero",
+									},
+								],
+							};
+						result = a / b;
+						break;
+				}
+				return { content: [{ type: "text", text: String(result) }] };
+			}
+		);
+	}
 }
 
-// Create a simple router handler
-async function handleRequest(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url);
-  
-  // Health check endpoint
-  if (url.pathname === '/health') {
-    return new Response(JSON.stringify({ status: 'healthy' }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
-  }
-  
-  // Handle CORS preflight
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-      }
-    });
-  }
-  
-  // Handle MCP requests
-  if (url.pathname === '/mcp' && request.method === 'POST') {
-    try {
-      // Create the MCP server with the generated tools
-      const mcpServer = createServer({
-        // Add configuration options as needed
-        apiKey: env.SCORECARD_API_KEY,
-      });
-      
-      // Process the request
-      const response = await mcpServer.handle(request);
-      
-      // Add CORS headers
-      const headers = new Headers(response.headers);
-      headers.set('Access-Control-Allow-Origin', '*');
-      
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers
-      });
-    } catch (error) {
-      console.error('Error handling MCP request:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Internal server error', 
-          message: error instanceof Error ? error.message : String(error) 
-        }),
-        { 
-          status: 500,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-          }
-        }
-      );
-    }
-  }
-  
-  // 404 for all other routes
-  return new Response('Not Found', { status: 404 });
-}
-
-// Export the Cloudflare Worker handler
 export default {
-  async fetch(
-    request: Request,
-    env: Env,
-    ctx: ExecutionContext
-  ): Promise<Response> {
-    return handleRequest(request, env);
-  }
+	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+		const url = new URL(request.url);
+
+		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
+			// @ts-ignore
+			return MyMCP.serveSSE("/sse").fetch(request, env, ctx);
+		}
+
+		if (url.pathname === "/mcp") {
+			// @ts-ignore
+			return MyMCP.serve("/mcp").fetch(request, env, ctx);
+		}
+
+		return new Response("Not found", { status: 404 });
+	},
 };
