@@ -180,10 +180,12 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         
         // Construct a simple SSE response that won't timeout
         let responseBody = 
-          // Initial ready message
-          `data: {"version":"v1","type":"connection_status","connection_status":{"status":"connected"}}\n\n` +
-          // Add authentication message
-          `data: {"version":"v1","type":"auth_response","auth_response":{"type":"none","status":"success"}}\n\n` +
+          // Initial ready message with event type
+          `event: ready\ndata: {"version":"v1","type":"connection_status","connection_status":{"status":"connected"}}\n\n` +
+          // Add authentication message with event type
+          `event: authentication\ndata: {"version":"v1","type":"auth_response","auth_response":{"type":"none","status":"success"}}\n\n` +
+          // Add tools message with event type
+          `event: tools\ndata: {"version":"v1","type":"tools","tools":[{"name":"get_projects","description":"Get all projects from Scorecard"},{"name":"get_records","description":"Get records from Scorecard"}]}\n\n` +
           // Ping to keep the connection alive
           `: ping\n\n`;
           
