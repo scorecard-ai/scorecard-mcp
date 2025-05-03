@@ -1,0 +1,19 @@
+{
+  "name": "scorecard-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Scorecard using Cloudflare Workers",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler build"
+  },
+  "dependencies": {
+    "scorecard-ai-mcp": "^1.0.0-alpha.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250503.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^3.0.0"
+  }
+}
