@@ -35,8 +35,7 @@ export const serverConfig = {
   endpoints: {
     mcp: '/mcp',       // Standard MCP endpoint
     sse: '/sse',       // Alternative SSE endpoint
-    noAuth: '/mcp/no-auth',  // Endpoint without OAuth for simple testing
-    stainless: '/stainless'  // Stainless Tools endpoint
+    noAuth: '/mcp/no-auth'  // Endpoint without OAuth for simple testing
   },
   
   // OAuth configuration

@@ -1157,10 +1157,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     });
   }
   
-  // Handle Stainless Tools requests
-  if (url.pathname === '/stainless') {
-    return handleStainlessTools(request, env);
-  }
+  // Stainless Tools endpoint removed
   
   // Handle MCP requests - support multiple paths
   if (url.pathname === '/mcp' || url.pathname === '/sse' || url.pathname === '/mcp/no-auth') {
@@ -1226,10 +1223,20 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
           const authResponse = {
             version: "v1",
             type: "auth_response",
-            auth_response: {
-              type: "none", // Change to "none" for simpler testing
-              status: "success"
-            }
+            auth_response: url.pathname === '/mcp/no-auth'
+              ? {
+                  // No authentication for the no-auth endpoint
+                  type: "none",
+                  status: "success"
+                }
+              : {
+                  // OAuth authentication for regular endpoints
+                  type: "oauth",
+                  status: "success",
+                  oauth: {
+                    server: `https://${request.headers.get('host') || "scorecard-mcp.dare-d5b.workers.dev"}`
+                  }
+                }
           };
           
           logWithContext('info', "Sending authentication response event", authResponse);
