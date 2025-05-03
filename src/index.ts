@@ -882,28 +882,80 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       if (acceptHeader && acceptHeader.includes('text/event-stream')) {
         console.log("Setting up SSE connection for MCP");
         
-        // Instead of using a streaming response which might timeout in Cloudflare,
-        // let's use a simpler approach for testing
-        const headers = new Headers({
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*'
+        // Create streaming response with custom transformer
+        const { readable, writable } = new TransformStream();
+        const writer = writable.getWriter();
+        
+        // Send initial events
+        const encoder = new TextEncoder();
+        
+        // Function to write SSE events
+        const writeEvent = async (event, data) => {
+          await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+        
+        // Write the standard MCP initialization sequence
+        const writeInitEvents = async () => {
+          // Step 1: Connection ready event
+          await writeEvent('ready', {
+            version: "v1",
+            type: "connection_status",
+            connection_status: {
+              status: "connected"
+            }
+          });
+          
+          // Step 2: Authentication success event
+          await writeEvent('authentication', {
+            version: "v1",
+            type: "auth_response",
+            auth_response: {
+              type: "oauth",
+              status: "success",
+              oauth: {
+                server: "https://scorecard-mcp.dare-d5b.workers.dev"
+              }
+            }
+          });
+          
+          // Step 3: Available tools event
+          await writeEvent('tools', {
+            version: "v1",
+            type: "tools",
+            tools: [
+              {
+                name: "get_projects",
+                description: "Get all projects from Scorecard"
+              },
+              {
+                name: "get_records",
+                description: "Get records from Scorecard"
+              }
+            ]
+          });
+          
+          // Keep the connection alive with a comment
+          await writer.write(encoder.encode(`: ping\n\n`));
+          
+          // In Cloudflare Workers, we can't keep the connection alive indefinitely,
+          // so we close it after sending the initial events
+          await writer.close();
+        };
+        
+        // Execute the initialization asynchronously
+        writeInitEvents().catch(error => {
+          console.error("Error writing SSE events:", error);
+          writer.close();
         });
         
-        // Construct a simple SSE response that won't timeout
-        let responseBody = 
-          // Initial ready message with event type
-          `event: ready\ndata: {"version":"v1","type":"connection_status","connection_status":{"status":"connected"}}\n\n` +
-          // Add authentication message with event type, including OAuth option
-          `event: authentication\ndata: {"version":"v1","type":"auth_response","auth_response":{"type":"oauth","status":"success","oauth":{"server":"https://scorecard-mcp.dare-d5b.workers.dev"}}}\n\n` +
-          // Add tools message with event type
-          `event: tools\ndata: {"version":"v1","type":"tools","tools":[{"name":"get_projects","description":"Get all projects from Scorecard"},{"name":"get_records","description":"Get records from Scorecard"}]}\n\n` +
-          // Ping to keep the connection alive
-          `: ping\n\n`;
-          
-        return new Response(responseBody, { 
-          headers: headers
+        // Return the readable stream
+        return new Response(readable, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+          }
         });
       }
       
