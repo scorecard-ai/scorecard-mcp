@@ -1,6 +1,6 @@
 import { server, init } from 'scorecard-ai-mcp/server';
 import Scorecard from 'scorecard-ai';
-import { createServer } from '@modelcontextprotocol/sdk/server';
+import { createServer } from '@modelcontextprotocol/sdk/server/index.js';
 
 // Define environment interface for our Cloudflare Worker
 export interface Env {
