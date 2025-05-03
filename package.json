@@ -18,6 +18,8 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
     "agents": "^0.0.65",
+    "scorecard-ai": "^1.0.0-alpha.4",
+    "scorecard-ai-mcp": "^1.0.0-alpha.4",
     "zod": "^3.24.3"
   }
 }
