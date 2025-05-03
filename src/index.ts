@@ -1,5 +1,6 @@
 import { server, init } from 'scorecard-ai-mcp/server';
 import Scorecard from 'scorecard-ai';
+import { createServer } from '@modelcontextprotocol/sdk/server';
 
 // Define environment interface for our Cloudflare Worker
 export interface Env {
@@ -43,25 +44,28 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         bearerToken: TOKEN  // Use bearerToken instead of apiKey
       });
       
-      // Initialize the MCP server with our client
+      // Create a standard MCP server that can handle HTTP requests
+      const mcpServer = createServer({
+        tools: [],  // The tools will come from the init function
+      });
+      
+      // Initialize it with our scorecard client
       init({
-        server,
+        server: mcpServer,
         client: scorecardClient
       });
       
-      // Process the request
-      // The server instance from the package is an McpServer object
-      // We need to use it properly for handling HTTP requests
-      const body = await request.json();
-      const response = await server.handleRequest(body);
+      // Process the request using the MCP server
+      const response = await mcpServer.handle(request);
       
-      // Return with CORS headers
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
+      // Add CORS headers
+      const headers = new Headers(response.headers);
+      headers.set('Access-Control-Allow-Origin', '*');
+      
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
       });
     } catch (error) {
       console.error('Error handling MCP request:', error);

@@ -9,6 +9,7 @@
     "build": "wrangler build"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
     "scorecard-ai": "^1.0.0-alpha.4",
     "scorecard-ai-mcp": "^1.0.0-alpha.4"
   },
