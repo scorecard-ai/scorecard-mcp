@@ -22,6 +22,89 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     });
   }
   
+  // OAuth Well-Known Endpoint for discovery
+  if (url.pathname === '/.well-known/oauth-authorization-server') {
+    return new Response(JSON.stringify({
+      issuer: "https://scorecard-mcp.dare-d5b.workers.dev",
+      authorization_endpoint: "https://scorecard-mcp.dare-d5b.workers.dev/oauth/authorize",
+      token_endpoint: "https://scorecard-mcp.dare-d5b.workers.dev/oauth/token",
+      scopes_supported: ["scorecard.api"],
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code"],
+      token_endpoint_auth_methods_supported: ["none"],
+      code_challenge_methods_supported: ["S256"]
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }
+  
+  // OAuth Authorization Endpoint
+  if (url.pathname === '/oauth/authorize') {
+    // In a real implementation, this would redirect to a login page
+    // For our simple implementation, we'll just return a dummy code
+    
+    // Get the redirect_uri from the query parameters
+    const redirectUri = url.searchParams.get('redirect_uri');
+    const state = url.searchParams.get('state');
+    const codeChallenge = url.searchParams.get('code_challenge');
+    
+    if (!redirectUri) {
+      return new Response('Missing redirect_uri parameter', { status: 400 });
+    }
+    
+    // Generate a random code
+    const code = 'dummy_auth_code_' + Math.random().toString(36).substring(2, 15);
+    
+    // Redirect to the callback URL with the code
+    const callbackUrl = new URL(redirectUri);
+    callbackUrl.searchParams.append('code', code);
+    
+    // Add state if provided
+    if (state) {
+      callbackUrl.searchParams.append('state', state);
+    }
+    
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': callbackUrl.toString(),
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }
+  
+  // OAuth Token Endpoint
+  if (url.pathname === '/oauth/token' && request.method === 'POST') {
+    try {
+      // We'll just return a dummy token without validating anything
+      const dummyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkdW1teV91c2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.KobkNJNvj7jQWl3eri54FfRh1TvEQrqNlCaeXLMlqpE';
+      
+      return new Response(JSON.stringify({
+        access_token: dummyToken,
+        token_type: 'Bearer',
+        expires_in: 3600
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: 'invalid_request' }), {
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
+  }
+  
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new Response(null, {

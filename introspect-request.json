@@ -1,0 +1,7 @@
+{
+  "version": "v1",
+  "capabilities": [],
+  "request": {
+    "type": "introspect"
+  }
+}
