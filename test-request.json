@@ -1,0 +1,12 @@
+{
+  "version": "v1",
+  "capabilities": [],
+  "type": "request",
+  "request": {
+    "type": "invoke",
+    "invoke": {
+      "tool": "get_health",
+      "parameters": {}
+    }
+  }
+}
