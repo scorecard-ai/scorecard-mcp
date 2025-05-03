@@ -35,6 +35,12 @@
         connectBtn.addEventListener('click', () => {
             log('Connecting to MCP endpoint...');
             
+            // Close any existing connection
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            // Create a new connection with special handling for errors
             eventSource = new EventSource('https://scorecard-mcp.dare-d5b.workers.dev/mcp');
             
             eventSource.onopen = () => {
@@ -47,11 +53,17 @@
             
             eventSource.onerror = (error) => {
                 log(`Connection error: ${JSON.stringify(error)}`);
-                eventSource.close();
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
-                testIntrospectBtn.disabled = true;
-                testGetProjectsBtn.disabled = true;
+                
+                // For the purpose of testing, we'll keep the buttons enabled
+                // but let the user know about the connection issue
+                log('NOTE: Connection may have closed, but you can still test the POST endpoints');
+                
+                // Don't automatically close so tests can still run
+                // eventSource.close();
+                // connectBtn.disabled = false;
+                // disconnectBtn.disabled = true;
+                // testIntrospectBtn.disabled = true;
+                // testGetProjectsBtn.disabled = true;
             };
             
             eventSource.onmessage = (event) => {
