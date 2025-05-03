@@ -154,10 +154,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   
   // Handle MCP requests
   if (url.pathname === '/mcp') {
+    // Log basic info to avoid cluttering logs
     console.log("MCP request received:", {
       method: request.method,
-      url: request.url,
-      headers: Object.fromEntries([...request.headers.entries()])
+      url: request.url
     });
     
     // Handle GET requests for streaming connections
@@ -169,70 +169,26 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       if (acceptHeader && acceptHeader.includes('text/event-stream')) {
         console.log("Setting up SSE connection for MCP");
         
-        // This is an SSE connection request
-        const responseStream = new ReadableStream({
-          start(controller) {
-            // Send an initial message
-            const initialMessage = `event: ready\ndata: {"status":"connected","message":"MCP connection established"}\n\n`;
-            controller.enqueue(new TextEncoder().encode(initialMessage));
-            
-            // Send an authentication success message specifically for MCP clients
-            const authMessage = `event: authentication\ndata: {"status":"success","type":"none"}\n\n`;
-            controller.enqueue(new TextEncoder().encode(authMessage));
-            
-            // Send a tools message with our available tools
-            const toolsMessage = `event: tools\ndata: ${JSON.stringify({
-              "tools": [
-                {
-                  "name": "get_projects",
-                  "description": "Get all projects from Scorecard",
-                  "input_schema": {},
-                  "authentication": {
-                    "type": "none"
-                  }
-                },
-                {
-                  "name": "get_records",
-                  "description": "Get records from Scorecard",
-                  "input_schema": {
-                    "type": "object",
-                    "properties": {
-                      "project_id": {
-                        "type": "string",
-                        "description": "The ID of the project"
-                      }
-                    }
-                  },
-                  "authentication": {
-                    "type": "none"
-                  }
-                }
-              ]
-            })}\n\n`;
-            controller.enqueue(new TextEncoder().encode(toolsMessage));
-            
-            // Keep the connection alive
-            const interval = setInterval(() => {
-              controller.enqueue(new TextEncoder().encode(': ping\n\n'));
-            }, 30000);
-            
-            // Clean up when the connection closes
-            const cleanup = () => {
-              clearInterval(interval);
-            };
-            
-            // Return a cleanup function
-            return cleanup;
-          }
+        // Instead of using a streaming response which might timeout in Cloudflare,
+        // let's use a simpler approach for testing
+        const headers = new Headers({
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*'
         });
         
-        return new Response(responseStream, {
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*'
-          }
+        // Construct a simple SSE response that won't timeout
+        let responseBody = 
+          // Initial ready message
+          `data: {"version":"v1","type":"connection_status","connection_status":{"status":"connected"}}\n\n` +
+          // Add authentication message
+          `data: {"version":"v1","type":"auth_response","auth_response":{"type":"none","status":"success"}}\n\n` +
+          // Ping to keep the connection alive
+          `: ping\n\n`;
+          
+        return new Response(responseBody, { 
+          headers: headers
         });
       }
       
