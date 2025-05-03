@@ -702,9 +702,11 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // OAuth Authorization Endpoint - redirect to Clerk
   if (url.pathname === '/oauth/authorize') {
     // Log all request details for debugging
-    console.log("Authorization request received, redirecting to Clerk:", {
+    logWithContext('info', "OAuth authorization request received", {
       url: request.url,
-      params: Object.fromEntries([...url.searchParams.entries()])
+      method: request.method,
+      params: Object.fromEntries([...url.searchParams.entries()]),
+      headers: Object.fromEntries([...request.headers.entries()])
     });
     
     // Get the parameters from the query
@@ -716,7 +718,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     const scope = url.searchParams.get('scope');
     
     // Always use the Claude redirect URI for testing - this ensures we're using the exact URL registered in Clerk
+    const originalRedirectUri = redirectUri;
     redirectUri = 'https://claude.ai/oauth/callback';
+    
+    logWithContext('info', "Using Claude.ai OAuth callback URL", {
+      originalRedirectUri,
+      forcedRedirectUri: redirectUri
+    });
     
     if (!redirectUri) {
       console.log("Error: Missing redirect_uri parameter");
@@ -766,11 +774,29 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // OAuth Token Endpoint - proxy to Clerk
   if (url.pathname === '/oauth/token' && request.method === 'POST') {
     try {
-      console.log("Token request received, proxying to Clerk");
+      logWithContext('info', "OAuth token request received", {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries([...request.headers.entries()])
+      });
       
       // Log the incoming token request for debugging
       const cloneRequest = request.clone();
       const body = await cloneRequest.text();
+      
+      // Try to parse the body if it's URL-encoded
+      let parsedBody = {};
+      try {
+        const params = new URLSearchParams(body);
+        parsedBody = Object.fromEntries(params.entries());
+        // Mask sensitive values
+        if (parsedBody.code) parsedBody.code = '***REDACTED***';
+        if (parsedBody.client_secret) parsedBody.client_secret = '***REDACTED***';
+      } catch (e) {
+        parsedBody = { error: "Could not parse body" };
+      }
+      
+      logWithContext('debug', "OAuth token request body", parsedBody);
       console.log("Token request body:", body);
       
       if (!env.CLERK_OAUTH_CLIENT_ID || !env.CLERK_OAUTH_CLIENT_SECRET) {
@@ -822,7 +848,18 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       
       // Return the response from Clerk
       const tokenData = await clerkResponse.json();
-      console.log("Token response status:", clerkResponse.status);
+      
+      // Log the response with sensitive data masked
+      const sanitizedTokenData = { ...tokenData };
+      if (sanitizedTokenData.access_token) sanitizedTokenData.access_token = '***REDACTED***';
+      if (sanitizedTokenData.refresh_token) sanitizedTokenData.refresh_token = '***REDACTED***';
+      if (sanitizedTokenData.id_token) sanitizedTokenData.id_token = '***REDACTED***';
+      
+      logWithContext('info', `Token response received from Clerk: ${clerkResponse.status}`, {
+        status: clerkResponse.status,
+        headers: Object.fromEntries([...clerkResponse.headers.entries()]),
+        body: sanitizedTokenData
+      });
       
       return new Response(JSON.stringify(tokenData), {
         status: clerkResponse.status,
@@ -923,17 +960,21 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
           });
           
           // Step 2: Authentication success event
-          await writeEvent('authentication', {
+          // Add detailed log for debugging
+          const authResponse = {
             version: "v1",
             type: "auth_response",
             auth_response: {
               type: "oauth",
               status: "success",
               oauth: {
-                server: "https://scorecard-mcp.dare-d5b.workers.dev"
+                server: `https://${request.headers.get('host') || "scorecard-mcp.dare-d5b.workers.dev"}`
               }
             }
-          });
+          };
+          
+          logWithContext('info', "Sending authentication response event", authResponse);
+          await writeEvent('authentication', authResponse);
           
           // Step 3: Available tools event
           await writeEvent('tools', {
