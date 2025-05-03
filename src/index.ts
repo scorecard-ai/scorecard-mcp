@@ -13,9 +13,22 @@ export interface Env {
   CLERK_OAUTH_CLIENT_SECRET?: string;
 }
 
+// Helper to log with timestamps and additional context
+function logWithContext(level: string, message: string, context?: any) {
+  const timestamp = new Date().toISOString();
+  if (context) {
+    console[level](`[${timestamp}] [scorecard-mcp] ${message}`, context);
+  } else {
+    console[level](`[${timestamp}] [scorecard-mcp] ${message}`);
+  }
+}
+
 // Create a simple router handler
 async function handleRequest(request: Request, env: Env): Promise<Response> {
+  const startTime = Date.now();
   const url = new URL(request.url);
+  
+  logWithContext('debug', `Request received: ${request.method} ${url.pathname}`);
   
   // Health check endpoint
   if (url.pathname === '/health') {
@@ -880,7 +893,10 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       console.log("MCP GET request with Accept header:", acceptHeader);
       
       if (acceptHeader && acceptHeader.includes('text/event-stream')) {
-        console.log("Setting up SSE connection for MCP");
+        logWithContext('info', "Setting up SSE connection for MCP", {
+          url: request.url,
+          headers: Object.fromEntries([...request.headers.entries()])
+        });
         
         // Create streaming response with custom transformer
         const { readable, writable } = new TransformStream();
@@ -891,6 +907,7 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         
         // Function to write SSE events
         const writeEvent = async (event, data) => {
+          logWithContext('debug', `Writing SSE event: ${event}`, data);
           await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
         };
         
@@ -939,12 +956,13 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
           
           // In Cloudflare Workers, we can't keep the connection alive indefinitely,
           // so we close it after sending the initial events
+          logWithContext('info', "Completed SSE initialization sequence, closing connection gracefully");
           await writer.close();
         };
         
         // Execute the initialization asynchronously
         writeInitEvents().catch(error => {
-          console.error("Error writing SSE events:", error);
+          logWithContext('error', "Error writing SSE events", error);
           writer.close();
         });
         
@@ -1263,6 +1281,32 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
-    return handleRequest(request, env);
+    const url = new URL(request.url);
+    const startTime = Date.now();
+    
+    try {
+      const response = await handleRequest(request, env);
+      
+      // Log the response timing
+      const duration = Date.now() - startTime;
+      logWithContext('debug', `Response sent: ${request.method} ${url.pathname} ${response.status} (${duration}ms)`);
+      
+      return response;
+    } catch (error) {
+      // Log any unhandled errors
+      logWithContext('error', `Unhandled error: ${request.method} ${url.pathname}`, error);
+      
+      // Return a graceful error response
+      return new Response(JSON.stringify({ 
+        error: 'server_error',
+        message: 'An unexpected error occurred'
+      }), {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
+      });
+    }
   }
 };
