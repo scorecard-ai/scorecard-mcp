@@ -9,11 +9,12 @@
     "build": "wrangler build"
   },
   "dependencies": {
+    "scorecard-ai": "^1.0.0-alpha.4",
     "scorecard-ai-mcp": "^1.0.0-alpha.4"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250503.0",
     "typescript": "^5.8.3",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.14.1"
   }
 }

@@ -1,4 +1,5 @@
-import { createServer } from 'scorecard-ai-mcp/server';
+import { server, init } from 'scorecard-ai-mcp/server';
+import Scorecard from 'scorecard-ai';
 
 // Define environment interface for our Cloudflare Worker
 export interface Env {
@@ -36,14 +37,19 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   // Handle MCP requests
   if (url.pathname === '/mcp' && request.method === 'POST') {
     try {
-      // Create the MCP server with the generated tools
-      const mcpServer = createServer({
-        // Add configuration options as needed
-        apiKey: env.SCORECARD_API_KEY,
+      // Initialize the MCP server with our API key
+      const scorecardClient = new Scorecard({
+        apiKey: env.SCORECARD_API_KEY
+      });
+      
+      // Initialize the MCP server with our client
+      init({
+        server,
+        client: scorecardClient
       });
       
       // Process the request
-      const response = await mcpServer.handle(request);
+      const response = await server.handle(request);
       
       // Add CORS headers
       const headers = new Headers(response.headers);
