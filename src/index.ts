@@ -167,12 +167,49 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       console.log("MCP GET request with Accept header:", acceptHeader);
       
       if (acceptHeader && acceptHeader.includes('text/event-stream')) {
+        console.log("Setting up SSE connection for MCP");
+        
         // This is an SSE connection request
         const responseStream = new ReadableStream({
           start(controller) {
             // Send an initial message
-            const initialMessage = `event: ready\ndata: {"status":"connected"}\n\n`;
+            const initialMessage = `event: ready\ndata: {"status":"connected","message":"MCP connection established"}\n\n`;
             controller.enqueue(new TextEncoder().encode(initialMessage));
+            
+            // Send an authentication success message specifically for MCP clients
+            const authMessage = `event: authentication\ndata: {"status":"success","type":"none"}\n\n`;
+            controller.enqueue(new TextEncoder().encode(authMessage));
+            
+            // Send a tools message with our available tools
+            const toolsMessage = `event: tools\ndata: ${JSON.stringify({
+              "tools": [
+                {
+                  "name": "get_projects",
+                  "description": "Get all projects from Scorecard",
+                  "input_schema": {},
+                  "authentication": {
+                    "type": "none"
+                  }
+                },
+                {
+                  "name": "get_records",
+                  "description": "Get records from Scorecard",
+                  "input_schema": {
+                    "type": "object",
+                    "properties": {
+                      "project_id": {
+                        "type": "string",
+                        "description": "The ID of the project"
+                      }
+                    }
+                  },
+                  "authentication": {
+                    "type": "none"
+                  }
+                }
+              ]
+            })}\n\n`;
+            controller.enqueue(new TextEncoder().encode(toolsMessage));
             
             // Keep the connection alive
             const interval = setInterval(() => {
@@ -237,12 +274,20 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       if (requestBody?.type === "auth_request") {
         console.log("MCP Authentication request received:", requestBody);
         
+        // Extract any credentials if provided
+        const credentials = requestBody.credentials;
+        console.log("Auth request credentials:", credentials);
+        
+        // For our simple implementation, we'll accept any authentication request
+        // In a real implementation, you would validate credentials here
+        
         // Handle MCP authentication request
         const responseBody = {
           version: "v1",
           type: "auth_response",
           auth_response: {
-            type: "none" // No authentication required
+            type: "none", // No authentication required
+            status: "success"
           }
         };
         
@@ -250,6 +295,72 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         
         // Return authentication response
         return new Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+      }
+      
+      // Check if this is an invocation request
+      if (requestBody?.request?.type === "invoke") {
+        console.log("Tool invocation request:", requestBody.request.invoke);
+        
+        const toolName = requestBody.request.invoke.tool;
+        const params = requestBody.request.invoke.parameters || {};
+        
+        // Handle different tools
+        let responseContent = [];
+        
+        if (toolName === "get_projects") {
+          // Simulate projects data
+          responseContent = [
+            {
+              type: "text",
+              text: "Here are your projects: \n\n- Project 1: Test Suite\n- Project 2: Production Monitoring\n- Project 3: Customer Feedback"
+            }
+          ];
+        } else if (toolName === "get_records") {
+          // Simulate records data
+          responseContent = [
+            {
+              type: "text",
+              text: `Records for project ${params.project_id || 'default'}: \n\n- Record 1: Test case passed\n- Record 2: Response time within limits\n- Record 3: User satisfaction high`
+            }
+          ];
+        } else {
+          // Unknown tool
+          return new Response(JSON.stringify({
+            version: "v1",
+            type: "response",
+            response: {
+              type: "error",
+              error: {
+                type: "invalid_request",
+                message: `Unknown tool: ${toolName}`
+              }
+            }
+          }), {
+            status: 400,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            }
+          });
+        }
+        
+        // Return successful response
+        return new Response(JSON.stringify({
+          version: "v1",
+          type: "response",
+          response: {
+            type: "success",
+            success: {
+              content: responseContent
+            }
+          }
+        }), {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
