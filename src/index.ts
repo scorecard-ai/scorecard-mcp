@@ -50,16 +50,18 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       });
       
       // Process the request
-      const response = await server.handle(request);
+      // The server instance from the package is an McpServer object
+      // We need to use it properly for handling HTTP requests
+      const body = await request.json();
+      const response = await server.handleRequest(body);
       
-      // Add CORS headers
-      const headers = new Headers(response.headers);
-      headers.set('Access-Control-Allow-Origin', '*');
-      
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers
+      // Return with CORS headers
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        }
       });
     } catch (error) {
       console.error('Error handling MCP request:', error);
