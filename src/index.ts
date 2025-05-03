@@ -1,10 +1,16 @@
 import { server, init } from 'scorecard-ai-mcp/server';
 import Scorecard from 'scorecard-ai';
 
+import { createClerkClient } from '@clerk/backend';
+
 // Define environment interface for our Cloudflare Worker
 export interface Env {
   // Add your environment variables/secrets here
   SCORECARD_API_KEY?: string;
+  CLERK_SECRET_KEY?: string;
+  CLERK_PUBLISHABLE_KEY?: string;
+  CLERK_OAUTH_CLIENT_ID?: string;
+  CLERK_OAUTH_CLIENT_SECRET?: string;
 }
 
 // Create a simple router handler
@@ -24,14 +30,20 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   
   // OAuth Well-Known Endpoint for discovery
   if (url.pathname === '/.well-known/oauth-authorization-server') {
+    // Get your Clerk instance URL from env vars, fallback to a default
+    const clerkIssuer = `https://${env.CLERK_PUBLISHABLE_KEY?.split('_')[1] || 'clerk.example.com'}`;
+    
+    console.log("OAuth discovery requested, using Clerk issuer:", clerkIssuer);
+    
     return new Response(JSON.stringify({
-      issuer: "https://scorecard-mcp.dare-d5b.workers.dev",
-      authorization_endpoint: "https://scorecard-mcp.dare-d5b.workers.dev/oauth/authorize",
-      token_endpoint: "https://scorecard-mcp.dare-d5b.workers.dev/oauth/token",
-      scopes_supported: ["scorecard.api"],
+      issuer: clerkIssuer,
+      authorization_endpoint: `${clerkIssuer}/oauth/authorize`,
+      token_endpoint: `${clerkIssuer}/oauth/token`,
+      jwks_uri: `${clerkIssuer}/.well-known/jwks.json`,
+      scopes_supported: ["openid", "profile", "email", "scorecard.api"],
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code"],
-      token_endpoint_auth_methods_supported: ["none"],
+      token_endpoint_auth_methods_supported: ["client_secret_post"],
       code_challenge_methods_supported: ["S256"]
     }), {
       status: 200,
@@ -42,96 +54,120 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     });
   }
   
-  // OAuth Authorization Endpoint
+  // OAuth Authorization Endpoint - redirect to Clerk
   if (url.pathname === '/oauth/authorize') {
-    // In a real implementation, this would redirect to a login page
-    // For our simple implementation, we'll just return a dummy code
-    
     // Log all request details for debugging
-    console.log("Authorization request received:", {
+    console.log("Authorization request received, redirecting to Clerk:", {
       url: request.url,
-      headers: Object.fromEntries([...request.headers.entries()]),
       params: Object.fromEntries([...url.searchParams.entries()])
     });
     
-    // Get the redirect_uri from the query parameters
+    // Get the parameters from the query
     const redirectUri = url.searchParams.get('redirect_uri');
     const state = url.searchParams.get('state');
     const codeChallenge = url.searchParams.get('code_challenge');
-    const clientId = url.searchParams.get('client_id');
+    const codeChallengeMethod = url.searchParams.get('code_challenge_method');
     const responseType = url.searchParams.get('response_type');
-    
-    console.log("OAuth params:", { redirectUri, state, codeChallenge, clientId, responseType });
+    const scope = url.searchParams.get('scope');
     
     if (!redirectUri) {
       console.log("Error: Missing redirect_uri parameter");
       return new Response('Missing redirect_uri parameter', { status: 400 });
     }
     
-    // Generate a random code
-    const code = 'dummy_auth_code_' + Math.random().toString(36).substring(2, 15);
-    
-    // Redirect to the callback URL with the code
-    const callbackUrl = new URL(redirectUri);
-    callbackUrl.searchParams.append('code', code);
-    
-    // Add state if provided
-    if (state) {
-      callbackUrl.searchParams.append('state', state);
+    if (!env.CLERK_PUBLISHABLE_KEY) {
+      console.log("Error: Missing CLERK_PUBLISHABLE_KEY");
+      return new Response('Server misconfiguration: Missing OAuth credentials', { status: 500 });
     }
     
+    // Get the Clerk instance URL from the publishable key
+    const clerkInstance = `https://${env.CLERK_PUBLISHABLE_KEY.split('_')[1]}`;
+    
+    // Build the authorization URL for Clerk
+    const clerkAuthUrl = new URL(`${clerkInstance}/oauth/authorize`);
+    
+    // Add all the required parameters
+    clerkAuthUrl.searchParams.append('client_id', env.CLERK_OAUTH_CLIENT_ID || '');
+    clerkAuthUrl.searchParams.append('redirect_uri', redirectUri);
+    clerkAuthUrl.searchParams.append('response_type', responseType || 'code');
+    
+    if (state) {
+      clerkAuthUrl.searchParams.append('state', state);
+    }
+    
+    if (scope) {
+      clerkAuthUrl.searchParams.append('scope', scope);
+    }
+    
+    if (codeChallenge && codeChallengeMethod) {
+      clerkAuthUrl.searchParams.append('code_challenge', codeChallenge);
+      clerkAuthUrl.searchParams.append('code_challenge_method', codeChallengeMethod);
+    }
+    
+    console.log("Redirecting to Clerk:", clerkAuthUrl.toString());
+    
+    // Redirect to Clerk's OAuth authorization endpoint
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': callbackUrl.toString(),
+        'Location': clerkAuthUrl.toString(),
         'Access-Control-Allow-Origin': '*'
       }
     });
   }
   
-  // OAuth Token Endpoint
+  // OAuth Token Endpoint - proxy to Clerk
   if (url.pathname === '/oauth/token' && request.method === 'POST') {
     try {
-      // Log token request details
-      console.log("Token request received:", {
-        url: request.url,
-        method: request.method,
-        headers: Object.fromEntries([...request.headers.entries()])
-      });
+      console.log("Token request received, proxying to Clerk");
       
-      // Parse the request body
-      const contentType = request.headers.get('content-type') || '';
-      let requestBody;
-      
-      if (contentType.includes('application/json')) {
-        requestBody = await request.json();
-      } else if (contentType.includes('application/x-www-form-urlencoded')) {
-        const formData = await request.formData();
-        requestBody = Object.fromEntries(formData);
-      } else {
-        // Try to read as text
-        requestBody = await request.text();
+      if (!env.CLERK_PUBLISHABLE_KEY || !env.CLERK_OAUTH_CLIENT_ID || !env.CLERK_OAUTH_CLIENT_SECRET) {
+        console.error("Missing Clerk credentials");
+        return new Response(JSON.stringify({ 
+          error: 'server_error',
+          error_description: 'OAuth server configuration error'
+        }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
       }
       
-      console.log("Token request body:", requestBody);
+      // Get the Clerk instance URL from the publishable key
+      const clerkInstance = `https://${env.CLERK_PUBLISHABLE_KEY.split('_')[1]}`;
+      const tokenUrl = `${clerkInstance}/oauth/token`;
       
-      // We'll just return a dummy token without validating anything
-      const dummyToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkdW1teV91c2VyIiwiaWF0IjoxNTE2MjM5MDIyfQ.KobkNJNvj7jQWl3eri54FfRh1TvEQrqNlCaeXLMlqpE';
+      console.log("Forwarding token request to:", tokenUrl);
       
-      return new Response(JSON.stringify({
-        access_token: dummyToken,
-        token_type: 'Bearer',
-        expires_in: 3600
-      }), {
-        status: 200,
+      // Forward the request to Clerk as-is
+      const clerkResponse = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': request.headers.get('content-type') || 'application/x-www-form-urlencoded',
+        },
+        body: await request.text()
+      });
+      
+      // Return the response from Clerk
+      const tokenData = await clerkResponse.json();
+      console.log("Token response status:", clerkResponse.status);
+      
+      return new Response(JSON.stringify(tokenData), {
+        status: clerkResponse.status,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         }
       });
     } catch (error) {
-      return new Response(JSON.stringify({ error: 'invalid_request' }), {
-        status: 400,
+      console.error("Error in token endpoint:", error);
+      return new Response(JSON.stringify({ 
+        error: 'server_error',
+        error_description: error instanceof Error ? error.message : String(error)
+      }), {
+        status: 500,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
@@ -160,6 +196,21 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       url: request.url
     });
     
+    // Initialize Clerk client for token validation
+    let clerkClient;
+    try {
+      if (env.CLERK_SECRET_KEY) {
+        clerkClient = createClerkClient({ 
+          secretKey: env.CLERK_SECRET_KEY 
+        });
+        console.log("Clerk client initialized");
+      } else {
+        console.log("No CLERK_SECRET_KEY provided, skipping token validation");
+      }
+    } catch (error) {
+      console.error("Error initializing Clerk client:", error);
+    }
+    
     // Handle GET requests for streaming connections
     if (request.method === 'GET') {
       // Check if this is a server-sent events request
@@ -182,8 +233,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         let responseBody = 
           // Initial ready message with event type
           `event: ready\ndata: {"version":"v1","type":"connection_status","connection_status":{"status":"connected"}}\n\n` +
-          // Add authentication message with event type
-          `event: authentication\ndata: {"version":"v1","type":"auth_response","auth_response":{"type":"none","status":"success"}}\n\n` +
+          // Add authentication message with event type, including OAuth option
+          `event: authentication\ndata: {"version":"v1","type":"auth_response","auth_response":{"type":"oauth","status":"success","oauth":{"server":"https://scorecard-mcp.dare-d5b.workers.dev"}}}\n\n` +
           // Add tools message with event type
           `event: tools\ndata: {"version":"v1","type":"tools","tools":[{"name":"get_projects","description":"Get all projects from Scorecard"},{"name":"get_records","description":"Get records from Scorecard"}]}\n\n` +
           // Ping to keep the connection alive
@@ -229,8 +280,67 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
         const credentials = requestBody.credentials;
         console.log("Auth request credentials:", credentials);
         
-        // For our simple implementation, we'll accept any authentication request
-        // In a real implementation, you would validate credentials here
+        // Check if we have a bearer token in the credentials
+        if (credentials?.type === "bearer" && credentials?.token && clerkClient) {
+          try {
+            // Validate the token with Clerk
+            console.log("Attempting to validate bearer token with Clerk");
+            
+            // Using the Clerk authenticate request to validate the OAuth token
+            const authRequest = await clerkClient.authenticateRequest(request, { 
+              acceptsToken: 'oauth_access_token'
+            });
+            
+            // Check if token is valid
+            const auth = authRequest.toAuth();
+            if (auth.tokenType === 'oauth_access_token' && auth.sub) {
+              console.log("Token validation successful, user:", auth.sub);
+              
+              // Return a success response
+              const responseBody = {
+                version: "v1",
+                type: "auth_response",
+                auth_response: {
+                  type: "oauth",
+                  status: "success"
+                }
+              };
+              
+              return new Response(JSON.stringify(responseBody), {
+                status: 200,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Access-Control-Allow-Origin': '*'
+                }
+              });
+            }
+          } catch (error) {
+            console.error("Token validation error:", error);
+            
+            // Return an authentication failure
+            return new Response(JSON.stringify({
+              version: "v1",
+              type: "auth_response",
+              auth_response: {
+                type: "oauth",
+                status: "error",
+                error: {
+                  type: "invalid_token",
+                  message: "Invalid or expired token"
+                }
+              }
+            }), {
+              status: 401,
+              headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+              }
+            });
+          }
+        }
+        
+        // For our simple implementation, we'll also accept requests without credentials
+        // In a real implementation, you would require proper authentication
         
         // Handle MCP authentication request
         const responseBody = {

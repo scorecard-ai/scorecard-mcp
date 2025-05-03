@@ -1,6 +1,10 @@
 # Clerk API keys
-CLERK_SECRET_KEY=your_clerk_secret_key_here
-CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
+CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
+
+# Clerk OAuth application credentials
+CLERK_OAUTH_CLIENT_ID=your_clerk_oauth_client_id
+CLERK_OAUTH_CLIENT_SECRET=your_clerk_oauth_client_secret
 
 # Scorecard API key
-SCORECARD_API_KEY=your_scorecard_api_key_here
+SCORECARD_API_KEY=your_scorecard_api_key

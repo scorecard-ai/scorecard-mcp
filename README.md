@@ -17,6 +17,15 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 - Node.js and npm
 - Scorecard API access
 - Cloudflare account
+- Clerk account (for OAuth authentication)
+
+### Setting up Clerk OAuth (Optional)
+
+1. Create a Clerk account at https://clerk.dev
+2. In your Clerk Dashboard, navigate to "OAuth Applications"
+3. Create a new OAuth Application
+4. Set the redirect URI to the callback URL of your client application
+5. Copy the Client ID and Client Secret for use in the next steps
 
 ### Installation
 
@@ -35,6 +44,12 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
    ```bash
    # Add Scorecard API key
    npx wrangler secret put SCORECARD_API_KEY
+   
+   # For Clerk OAuth (if used)
+   npx wrangler secret put CLERK_SECRET_KEY
+   npx wrangler secret put CLERK_PUBLISHABLE_KEY
+   npx wrangler secret put CLERK_OAUTH_CLIENT_ID
+   npx wrangler secret put CLERK_OAUTH_CLIENT_SECRET
    ```
 
 4. Run locally
