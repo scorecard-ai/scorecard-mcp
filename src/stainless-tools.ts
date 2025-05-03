@@ -1,22 +1,8 @@
 // Custom implementation of a simplified tools adapter
 // This is a minimal implementation that doesn't require external dependencies
 
-// Define the Scorecard tools schema
-const toolsSchema = {
-  get_projects: {
-    description: 'Get all projects from Scorecard',
-    parameters: {},
-  },
-  get_records: {
-    description: 'Get records from a Scorecard project',
-    parameters: {
-      project_id: {
-        type: 'string',
-        description: 'The ID of the project to get records from'
-      }
-    }
-  }
-};
+// Import configuration
+import { toolsSchema, mockProjects, mockRecords } from './config';
 
 export interface Env {
   // Add environment variables
@@ -81,11 +67,7 @@ export async function handleStainlessTools(request: Request, env: Env): Promise<
       // Here we would connect to the Scorecard API
       // For now, return mock data
       result = {
-        projects: [
-          { id: 'proj_1', name: 'Test Project', description: 'A test project' },
-          { id: 'proj_2', name: 'Production Monitoring', description: 'Monitor production metrics' },
-          { id: 'proj_3', name: 'Customer Feedback', description: 'Track customer feedback' }
-        ]
+        projects: mockProjects
       };
     } else if (tool === 'get_records') {
       const projectId = params?.project_id || 'default';
@@ -93,11 +75,7 @@ export async function handleStainlessTools(request: Request, env: Env): Promise<
       // Here we would connect to the Scorecard API
       // For now, return mock data
       result = {
-        records: [
-          { id: 'rec_1', name: 'Record 1', status: 'active' },
-          { id: 'rec_2', name: 'Record 2', status: 'complete' },
-          { id: 'rec_3', name: 'Record 3', status: 'pending' }
-        ]
+        records: mockRecords
       };
     } else {
       return new Response(JSON.stringify({ 

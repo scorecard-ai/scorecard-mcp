@@ -2,6 +2,7 @@ import { server, init } from 'scorecard-ai-mcp/server';
 import Scorecard from 'scorecard-ai';
 import { createClerkClient } from '@clerk/backend';
 import { handleStainlessTools } from './stainless-tools';
+import { serverConfig, toolsSchema } from './config';
 
 // Define environment interface for our Cloudflare Worker
 export interface Env {
@@ -36,6 +37,267 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  }
+  
+  // Debug endpoint to show server configuration
+  if (url.pathname === '/debug') {
+    const baseUrl = `https://${request.headers.get('host') || "scorecard-mcp.dare-d5b.workers.dev"}`;
+    
+    // Create links to test each endpoint
+    const endpoints = Object.entries(serverConfig.endpoints).map(([name, path]) => ({
+      name,
+      path,
+      url: `${baseUrl}${path}`,
+      testUrl: `${baseUrl}${path}`
+    }));
+    
+    // Include links to test discovery
+    const discoveryUrl = `${baseUrl}/.well-known/oauth-authorization-server`;
+    
+    // Create a debug response object
+    const debugInfo = {
+      server: {
+        baseUrl,
+        endpoints,
+        discoveryUrl
+      },
+      oauth: {
+        ...serverConfig.oauth,
+        fullAuthorizationUrl: `${serverConfig.oauth.issuer}/oauth/authorize?client_id=${serverConfig.oauth.clientId}&redirect_uri=${encodeURIComponent(serverConfig.oauth.redirectUri)}&response_type=code&scope=profile%20email%20scorecard.api`
+      },
+      tools: Object.keys(toolsSchema).map(name => ({ 
+        name, 
+        description: toolsSchema[name].description,
+        testUrl: `${baseUrl}/mcp`,
+        testPayload: JSON.stringify({
+          version: "v1",
+          request: {
+            type: "invoke",
+            invoke: {
+              tool: name
+            }
+          }
+        })
+      }))
+    };
+    
+    // Return a formatted HTML page
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scorecard MCP Debug</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      margin-top: 2rem;
+    }
+    pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+    }
+    th, td {
+      padding: 0.5rem;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      background: #f5f5f5;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      background: #4a6cf7;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      margin-right: 0.5rem;
+    }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scorecard MCP Server Debug</h1>
+  
+  <div class="card">
+    <h2>Server Information</h2>
+    <p>Base URL: <code>${baseUrl}</code></p>
+    
+    <h3>Endpoints</h3>
+    <table>
+      <tr>
+        <th>Name</th>
+        <th>Path</th>
+        <th>Full URL</th>
+        <th>Test</th>
+      </tr>
+      ${endpoints.map(endpoint => `
+      <tr>
+        <td>${endpoint.name}</td>
+        <td><code>${endpoint.path}</code></td>
+        <td><code>${endpoint.url}</code></td>
+        <td>
+          <a href="${endpoint.testUrl}" target="_blank" class="btn">Test GET</a>
+          ${endpoint.name === 'mcp' || endpoint.name === 'sse' ? 
+            `<button onclick="testSSE('${endpoint.testUrl}')" class="btn">Test SSE</button>` : ''}
+        </td>
+      </tr>
+      `).join('')}
+    </table>
+  </div>
+  
+  <div class="card">
+    <h2>OAuth Configuration</h2>
+    <p>Issuer: <code>${serverConfig.oauth.issuer}</code></p>
+    <p>Client ID: <code>${serverConfig.oauth.clientId}</code></p>
+    <p>Redirect URI: <code>${serverConfig.oauth.redirectUri}</code></p>
+    
+    <h3>Discovery</h3>
+    <p>
+      <a href="${discoveryUrl}" target="_blank" class="btn">Test Discovery</a>
+    </p>
+    
+    <h3>Authorization</h3>
+    <p>
+      <a href="${serverConfig.oauth.fullAuthorizationUrl}" target="_blank" class="btn">Test OAuth Flow</a>
+    </p>
+  </div>
+  
+  <div class="card">
+    <h2>Available Tools</h2>
+    <table>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Test</th>
+      </tr>
+      ${debugInfo.tools.map(tool => `
+      <tr>
+        <td>${tool.name}</td>
+        <td>${tool.description}</td>
+        <td>
+          <button onclick="testTool('${tool.testUrl}', '${tool.name}')" class="btn">Test Tool</button>
+        </td>
+      </tr>
+      `).join('')}
+    </table>
+  </div>
+  
+  <div class="card">
+    <h2>Test Results</h2>
+    <div id="results">
+      <p>Run tests to see results here.</p>
+    </div>
+  </div>
+  
+  <script>
+    // Function to test SSE connection
+    function testSSE(url) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<h3>Testing SSE Connection</h3><p>Connecting to ' + url + '...</p>';
+      
+      try {
+        const evtSource = new EventSource(url);
+        let eventsReceived = 0;
+        
+        evtSource.onopen = function() {
+          resultsDiv.innerHTML += '<p class="success">Connection opened successfully</p>';
+        };
+        
+        evtSource.onerror = function(err) {
+          resultsDiv.innerHTML += '<p class="error">Error: ' + JSON.stringify(err) + '</p>';
+          evtSource.close();
+        };
+        
+        // Listen for different event types
+        ['ready', 'authentication', 'tools'].forEach(eventType => {
+          evtSource.addEventListener(eventType, function(e) {
+            eventsReceived++;
+            resultsDiv.innerHTML += '<p>Received event: <strong>' + eventType + '</strong></p><pre>' + e.data + '</pre>';
+            
+            // Close connection after receiving all expected events
+            if (eventsReceived >= 3) {
+              resultsDiv.innerHTML += '<p>All expected events received, closing connection.</p>';
+              evtSource.close();
+            }
+          });
+        });
+        
+        // Close the connection after 5 seconds if not already closed
+        setTimeout(() => {
+          if (eventsReceived < 3) {
+            resultsDiv.innerHTML += '<p>Timeout after 5 seconds, closing connection.</p>';
+            evtSource.close();
+          }
+        }, 5000);
+      } catch (error) {
+        resultsDiv.innerHTML += '<p class="error">Error creating EventSource: ' + error.message + '</p>';
+      }
+    }
+    
+    // Function to test tool invocation
+    async function testTool(url, toolName) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = '<h3>Testing Tool: ' + toolName + '</h3><p>Sending request to ' + url + '...</p>';
+      
+      const payload = {
+        version: "v1",
+        request: {
+          type: "invoke",
+          invoke: {
+            tool: toolName
+          }
+        }
+      };
+      
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        
+        resultsDiv.innerHTML += '<p>Response status: ' + response.status + '</p>';
+        resultsDiv.innerHTML += '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+      } catch (error) {
+        resultsDiv.innerHTML += '<p class="error">Error: ' + error.message + '</p>';
+      }
+    }
+  </script>
+</body>
+</html>`;
+    
+    return new Response(htmlContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html',
         'Access-Control-Allow-Origin': '*'
       }
     });
@@ -900,8 +1162,8 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
     return handleStainlessTools(request, env);
   }
   
-  // Handle MCP requests
-  if (url.pathname === '/mcp') {
+  // Handle MCP requests - support both /mcp and /sse paths
+  if (url.pathname === '/mcp' || url.pathname === '/sse') {
     // Log basic info to avoid cluttering logs
     console.log("MCP request received:", {
       method: request.method,
