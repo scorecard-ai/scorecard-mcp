@@ -64,12 +64,61 @@ A Model Context Protocol (MCP) server for Scorecard, enabling Claude and other A
 
 ## Usage
 
-Once deployed, the MCP server can be used with Claude by adding it as an integration. The endpoint is:
+### Using with Claude
 
-```
-https://scorecard-mcp.dare-d5b.workers.dev/mcp
-```
+Once deployed, the MCP server can be used with Claude by adding it as an integration:
+
+1. From Claude's interface, select "Add MCP" from settings
+2. Enter the MCP server URL:
+   ```
+   https://scorecard-mcp.dare-d5b.workers.dev/mcp
+   ```
+3. For authentication, select "OAuth"
+4. Claude will discover the OAuth configuration from the server
+5. Complete the OAuth flow to authenticate with Scorecard
+6. Once connected, you can use the Scorecard tools in your conversations
+
+### Testing OAuth Flow
+
+To test the OAuth flow before using it with Claude:
+
+1. Open the OAuth test client:
+   ```
+   https://scorecard-mcp.dare-d5b.workers.dev/test-oauth-flow.html
+   ```
+2. Follow the steps in the test client to:
+   - Discover the OAuth configuration
+   - Initiate the OAuth authorization flow
+   - Exchange the authorization code for a token
+   - Test authentication with the MCP server
+   - Introspect available tools
+
+### Available Tools
+
+The Scorecard MCP server provides the following tools:
+
+- `get_projects`: Returns a list of all projects in Scorecard
+- `get_records`: Returns records from a specific Scorecard project
 
 ## Development
 
 To update the MCP server configuration, modify the settings in `src/index.ts`.
+
+### Local Development
+
+1. Clone the repository
+2. Install dependencies with `npm install`
+3. Create a `.dev.vars` file with required environment variables (see `.dev.vars.example`)
+4. Run locally with `npm run dev`
+
+### Deployment
+
+1. Deploy to Cloudflare Workers with `npm run deploy`
+2. Set required secrets with:
+   ```bash
+   npx wrangler secret put SCORECARD_API_KEY
+   npx wrangler secret put CLERK_SECRET_KEY
+   npx wrangler secret put CLERK_PUBLISHABLE_KEY
+   npx wrangler secret put CLERK_OAUTH_CLIENT_ID
+   npx wrangler secret put CLERK_OAUTH_CLIENT_SECRET
+   ```

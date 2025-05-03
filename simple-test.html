@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Clerk OAuth Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
+    }
+    .card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #3a5ce6;
+    }
+  </style>
+</head>
+<body>
+  <h1>Simple Clerk OAuth Test</h1>
+  
+  <div class="card">
+    <p>This page will attempt to directly authorize with Clerk using the Claude.ai redirect URI.</p>
+    <p><strong>NOTE:</strong> This will redirect you to the Claude.ai domain, which won't handle the request, but it will show if Clerk accepts the redirect URI.</p>
+    <button id="authBtn">Start OAuth Flow with Claude Redirect</button>
+  </div>
+
+  <script>
+    document.getElementById('authBtn').addEventListener('click', () => {
+      // Create direct Clerk OAuth URL
+      const authUrl = new URL('https://clerk.getscorecard.ai/oauth/authorize');
+      
+      // Add required parameters
+      authUrl.searchParams.append('client_id', 'arIFvS0RRW3eK3gH');
+      authUrl.searchParams.append('redirect_uri', 'https://claude.ai/oauth/callback');
+      authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('state', 'test-' + Math.random().toString(36).substring(2));
+      authUrl.searchParams.append('scope', 'profile email scorecard.api');
+      
+      // Redirect to Clerk
+      window.location.href = authUrl.toString();
+    });
+  </script>
+</body>
+</html>

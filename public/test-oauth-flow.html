@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scorecard MCP OAuth Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
+    }
+    .card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #4a6cf7;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-right: 10px;
+    }
+    button:hover {
+      background: #3a5ce6;
+    }
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .logs {
+      height: 300px;
+      overflow-y: auto;
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      background: #f5f5f5;
+      font-family: monospace;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+    .step {
+      border-left: 3px solid #4a6cf7;
+      padding-left: 15px;
+      margin: 15px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Scorecard MCP OAuth Test Client</h1>
+  
+  <div class="card">
+    <h2>MCP Server Configuration</h2>
+    <p>Enter your MCP server URL:</p>
+    <input type="text" id="serverUrl" value="https://scorecard-mcp.dare-d5b.workers.dev" style="width: 100%; padding: 8px; margin-bottom: 10px;">
+  </div>
+
+  <div class="card">
+    <h2>Step 1: Discover OAuth Configuration</h2>
+    <p>First, check the OAuth discovery endpoint to verify the server's OAuth configuration.</p>
+    <button id="discoverBtn">Discover OAuth Config</button>
+    <div id="discoveryResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 2: Initiate OAuth Authorization</h2>
+    <p>Start the OAuth flow by redirecting to the authorization endpoint.</p>
+    <button id="authorizeBtn" disabled>Start OAuth Authorization</button>
+    <div class="step">
+      <p>This will redirect you to the authorization server. After login, you'll be redirected back with an authorization code.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Step 3: Exchange Code for Token</h2>
+    <p>If you have an authorization code (after redirect), you can exchange it for an access token.</p>
+    <div>
+      <p>Authorization Code: <input type="text" id="authCode" style="width: 300px;"></p>
+      <button id="exchangeBtn" disabled>Exchange for Token</button>
+    </div>
+    <div id="tokenResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 4: Test MCP Authentication</h2>
+    <p>Test using the access token with the MCP server.</p>
+    <div>
+      <p>Access Token: <input type="text" id="accessToken" style="width: 300px;"></p>
+      <button id="testAuthBtn" disabled>Test Authentication</button>
+    </div>
+    <div id="authResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Step 5: Introspect Available Tools</h2>
+    <p>Check what tools are available through the MCP.</p>
+    <button id="introspectBtn" disabled>Introspect Tools</button>
+    <div id="toolsResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>Logs</h2>
+    <button id="clearLogsBtn">Clear Logs</button>
+    <div class="logs" id="logs"></div>
+  </div>
+
+  <script>
+    const serverUrlInput = document.getElementById('serverUrl');
+    const discoverBtn = document.getElementById('discoverBtn');
+    const authorizeBtn = document.getElementById('authorizeBtn');
+    const authCodeInput = document.getElementById('authCode');
+    const exchangeBtn = document.getElementById('exchangeBtn');
+    const accessTokenInput = document.getElementById('accessToken');
+    const testAuthBtn = document.getElementById('testAuthBtn');
+    const introspectBtn = document.getElementById('introspectBtn');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
+    
+    const discoveryResult = document.getElementById('discoveryResult');
+    const tokenResult = document.getElementById('tokenResult');
+    const authResult = document.getElementById('authResult');
+    const toolsResult = document.getElementById('toolsResult');
+    const logs = document.getElementById('logs');
+
+    // Parse query parameters from URL
+    const queryParams = new URLSearchParams(window.location.search);
+    const code = queryParams.get('code');
+    if (code) {
+      authCodeInput.value = code;
+      logMessage('Authorization code received from redirect: ' + code);
+      
+      // Auto-focus to the exchange button section
+      document.getElementById('exchangeBtn').scrollIntoView();
+      exchangeBtn.disabled = false;
+    }
+
+    // Function to log messages to the logs area
+    function logMessage(message, isError = false) {
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      if (isError) {
+        entry.classList.add('error');
+      }
+      logs.appendChild(entry);
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    // Function to make HTTP requests and handle responses
+    async function makeRequest(url, options = {}) {
+      try {
+        logMessage(`Making ${options.method || 'GET'} request to ${url}`);
+        const response = await fetch(url, options);
+        const contentType = response.headers.get('Content-Type') || '';
+        
+        let data;
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
+        
+        logMessage(`Response status: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}: ${JSON.stringify(data)}`);
+        }
+        
+        return { ok: true, data, status: response.status };
+      } catch (error) {
+        logMessage(`Error: ${error.message}`, true);
+        return { ok: false, error: error.message };
+      }
+    }
+
+    // Discover OAuth configuration
+    discoverBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value.trim();
+      if (!serverUrl) {
+        logMessage('Please enter a server URL', true);
+        return;
+      }
+      
+      const discoveryEndpoint = `${serverUrl}/.well-known/oauth-authorization-server`;
+      const result = await makeRequest(discoveryEndpoint);
+      
+      if (result.ok) {
+        discoveryResult.innerHTML = `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+        
+        // Store OAuth configuration for later use
+        window.oauthConfig = result.data;
+        
+        // Enable the authorize button
+        authorizeBtn.disabled = false;
+        
+        logMessage('OAuth discovery succeeded');
+      } else {
+        discoveryResult.innerHTML = `<div class="error">Discovery failed: ${result.error}</div>`;
+      }
+    });
+
+    // Start OAuth authorization
+    authorizeBtn.addEventListener('click', () => {
+      const serverUrl = serverUrlInput.value.trim();
+      if (!serverUrl) {
+        logMessage('Please enter a server URL', true);
+        return;
+      }
+      
+      // Create a random state value for security
+      const state = Math.random().toString(36).substring(2, 15);
+      
+      // Create a code verifier and challenge for PKCE
+      const generateCodeVerifier = () => {
+        const array = new Uint8Array(32);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => 
+          ('0' + (byte & 0xFF).toString(16)).slice(-2)
+        ).join('');
+      };
+      
+      const codeVerifier = generateCodeVerifier();
+      
+      // Generate code challenge (for simplicity using the verifier as the challenge)
+      // In a real app, you'd hash this with SHA-256 and base64 encode
+      const codeChallenge = codeVerifier;
+      
+      // Store these in localStorage for when we get redirected back
+      localStorage.setItem('oauth_state', state);
+      localStorage.setItem('oauth_code_verifier', codeVerifier);
+      
+      // Constructing the authorization URL
+      const authUrl = new URL(`${serverUrl}/oauth/authorize`);
+      authUrl.searchParams.append('client_id', 'test-client');
+      authUrl.searchParams.append('redirect_uri', window.location.href.split('?')[0]);
+      authUrl.searchParams.append('response_type', 'code');
+      authUrl.searchParams.append('state', state);
+      authUrl.searchParams.append('scope', 'openid profile email scorecard.api');
+      authUrl.searchParams.append('code_challenge', codeChallenge);
+      authUrl.searchParams.append('code_challenge_method', 'plain');
+      
+      logMessage(`Redirecting to authorization URL: ${authUrl.toString()}`);
+      
+      // Redirect to the authorization server
+      window.location.href = authUrl.toString();
+    });
+
+    // Exchange authorization code for access token
+    exchangeBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value.trim();
+      const authCode = authCodeInput.value.trim();
+      
+      if (!serverUrl || !authCode) {
+        logMessage('Please enter server URL and authorization code', true);
+        return;
+      }
+      
+      // Get the stored code verifier
+      const codeVerifier = localStorage.getItem('oauth_code_verifier');
+      if (!codeVerifier) {
+        logMessage('Code verifier not found in storage. Start from Step 1.', true);
+        return;
+      }
+      
+      const tokenEndpoint = `${serverUrl}/oauth/token`;
+      const body = new URLSearchParams();
+      body.append('grant_type', 'authorization_code');
+      body.append('code', authCode);
+      body.append('redirect_uri', window.location.href.split('?')[0]);
+      body.append('client_id', 'test-client');
+      body.append('code_verifier', codeVerifier);
+      
+      const result = await makeRequest(tokenEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body
+      });
+      
+      if (result.ok) {
+        tokenResult.innerHTML = `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+        
+        // Store the access token
+        const accessToken = result.data.access_token;
+        if (accessToken) {
+          accessTokenInput.value = accessToken;
+          testAuthBtn.disabled = false;
+          introspectBtn.disabled = false;
+        }
+        
+        logMessage('Token exchange succeeded');
+      } else {
+        tokenResult.innerHTML = `<div class="error">Token exchange failed: ${result.error}</div>`;
+      }
+    });
+
+    // Test MCP authentication
+    testAuthBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value.trim();
+      const accessToken = accessTokenInput.value.trim();
+      
+      if (!serverUrl || !accessToken) {
+        logMessage('Please enter server URL and access token', true);
+        return;
+      }
+      
+      const authRequest = {
+        version: "v1",
+        type: "auth_request",
+        credentials: {
+          type: "bearer",
+          token: accessToken
+        }
+      };
+      
+      const result = await makeRequest(`${serverUrl}/mcp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(authRequest)
+      });
+      
+      if (result.ok) {
+        authResult.innerHTML = `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+        logMessage('Authentication test succeeded');
+      } else {
+        authResult.innerHTML = `<div class="error">Authentication test failed: ${result.error}</div>`;
+      }
+    });
+
+    // Introspect tools
+    introspectBtn.addEventListener('click', async () => {
+      const serverUrl = serverUrlInput.value.trim();
+      const accessToken = accessTokenInput.value.trim();
+      
+      if (!serverUrl) {
+        logMessage('Please enter a server URL', true);
+        return;
+      }
+      
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+      
+      const introspectRequest = {
+        version: "v1",
+        request: {
+          type: "introspect"
+        }
+      };
+      
+      const result = await makeRequest(`${serverUrl}/mcp`, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(introspectRequest)
+      });
+      
+      if (result.ok) {
+        toolsResult.innerHTML = `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+        logMessage('Tool introspection succeeded');
+      } else {
+        toolsResult.innerHTML = `<div class="error">Tool introspection failed: ${result.error}</div>`;
+      }
+    });
+
+    // Clear logs
+    clearLogsBtn.addEventListener('click', () => {
+      logs.innerHTML = '';
+      logMessage('Logs cleared');
+    });
+
+    // Check if we have code from a redirect
+    if (authCodeInput.value) {
+      exchangeBtn.disabled = false;
+    }
+
+    // Initial log message
+    logMessage('OAuth test client initialized. Start by discovering the OAuth configuration.');
+  </script>
+</body>
+</html>
