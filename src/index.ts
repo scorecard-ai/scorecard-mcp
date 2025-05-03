@@ -38,8 +38,9 @@ async function handleRequest(request: Request, env: Env): Promise<Response> {
   if (url.pathname === '/mcp' && request.method === 'POST') {
     try {
       // Initialize the MCP server with our API key
+      const API_KEY = "***REMOVED***.eyJhdWQiOiJhdXRoZW50aWNhdGVkIiwiYXpwIjoiaHR0cHM6Ly9hcHAuZ2V0c2NvcmVjYXJkLmFpIiwiZW1haWwiOiJkYXJlQHNjb3JlY2FyZC5pbyIsImV4cCI6MjAwNTQ5NjM2MSwiaWF0IjoxNzQ2Mjk2MzYxLCJpc3MiOiJodHRwczovL2NsZXJrLmdldHNjb3JlY2FyZC5haSIsImp0aSI6ImY5OTdhMTY4YjBlZTczMzEyY2U2IiwibmJmIjoxNzQ2Mjk2MzU2LCJvcmdfaWQiOiJvcmdfMndiM0h3cDRJZ1lSUVZRUjB2RFB5VG9rbDZQIiwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJzdWIiOiJ1c2VyXzJYSU12NVlXRjk5dk5lT1J0dUdXbTJRcDE3VyJ9.HqXM88j2D6FCKyq2pI4H2iyfi8yByx_1ZrnsMO9OKII";
       const scorecardClient = new Scorecard({
-        apiKey: env.SCORECARD_API_KEY
+        apiKey: env.SCORECARD_API_KEY || API_KEY
       });
       
       // Initialize the MCP server with our client
