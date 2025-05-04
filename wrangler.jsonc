@@ -2,27 +2,40 @@
  * For more details on how to configure Wrangler, refer to:
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
-{
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "remote-mcp-server-authless",
+ {
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "mcp-auth0-oidc",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-03-10",
+	"compatibility_date": "2025-04-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"migrations": [
 		{
-			"new_sqlite_classes": ["MyMCP"],
+			"new_sqlite_classes": ["AuthenticatedMCP"],
 			"tag": "v1"
 		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
-				"class_name": "MyMCP",
+				"class_name": "AuthenticatedMCP",
 				"name": "MCP_OBJECT"
 			}
 		]
 	},
-	"observability": {
-		"enabled": true
+	"kv_namespaces": [
+		{
+			"binding": "OAUTH_KV",
+			"id": "<Enter your KV ID here>"
+		}
+	],
+	// These were in the example, disabling for now
+	// "ai": {
+	// 	"binding": "AI"
+	// },
+	// "observability": {
+	// 	"enabled": true
+	// },
+	"dev": {
+		"port": 8788
 	}
 }
