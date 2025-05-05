@@ -23,8 +23,8 @@
     "hono": "^4.7.8",
     "jose": "^6.0.10",
     "oauth4webapi": "^3.5.0",
-    "scorecard-ai": "^1.0.0-alpha.4",
-    "scorecard-ai-mcp": "file:../scorecard-node/packages/mcp-server/dist",
+    "scorecard-ai": "^1.0.0-alpha.5",
+    "scorecard-ai-mcp": "^1.0.0-alpha.5",
     "workers-mcp": "^0.0.13"
   }
 }
