@@ -55,3 +55,5 @@ Create file ".dev.vars" and add:
 ```bash
 SCORECARD_API_KEY=<API KEY FOR LOCAL TESTING>
 ```
+
+Remember to run "npx wrangler types" to generate types for the env variables.
