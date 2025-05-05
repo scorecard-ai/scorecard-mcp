@@ -1,7 +1,10 @@
-export type Props = {
-  accessToken: string;
-  expiresIn: number;
-  refreshToken: string;
-  scope: string;
-  token_type: string;
+import type { JWTPayload } from "jose";
+
+export type UserProps = {
+  claims: JWTPayload;
+  tokenSet: {
+    accessToken: string;
+    idToken: string;
+    refreshToken: string;
+  };
 };
