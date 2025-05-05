@@ -1,5 +1,3 @@
-import type { Props } from "./types";
-
 /**
  * Constructs an authorization URL for an upstream service.
  *
