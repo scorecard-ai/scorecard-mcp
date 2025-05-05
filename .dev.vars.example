@@ -1,10 +1,6 @@
-# Clerk API keys
-CLERK_SECRET_KEY=sk_test_your_clerk_secret_key
-CLERK_PUBLISHABLE_KEY=pk_test_your_clerk_publishable_key
-
-# Clerk OAuth application credentials
-CLERK_OAUTH_CLIENT_ID=your_clerk_oauth_client_id
-CLERK_OAUTH_CLIENT_SECRET=your_clerk_oauth_client_secret
-
-# Scorecard API key
-SCORECARD_API_KEY=your_scorecard_api_key
+NODE_ENV=development
+CLERK_CLIENT_ID=<from clerk dashboard>
+CLERK_CLIENT_SECRET=<generated in clerk dashboard>
+CLERK_DOMAIN=clerk.getscorecard.ai
+CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZ2V0c2NvcmVjYXJkLmFpJA
+COOKIE_ENCRYPTION_KEY=<randomly generate this>
