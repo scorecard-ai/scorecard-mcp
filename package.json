@@ -16,15 +16,12 @@
     "wrangler": "^4.2.0"
   },
   "dependencies": {
-    "@clerk/backend": "^1.31.2",
     "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@modelcontextprotocol/sdk": "^1.7.0",
-    "agents": "^0.0.65",
+    "agents": "^0.0.76",
     "hono": "^4.7.8",
-    "jose": "^6.0.10",
-    "oauth4webapi": "^3.5.0",
     "scorecard-ai": "^1.0.0-alpha.4",
-    "scorecard-ai-mcp": "^1.0.0-alpha.4",
+    "scorecard-ai-mcp": "file:../scorecard-node/packages/mcp-server/dist",
     "workers-mcp": "^0.0.13"
   }
 }
