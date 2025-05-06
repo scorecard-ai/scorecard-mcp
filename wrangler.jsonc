@@ -22,12 +22,12 @@
       }
     ]
   },
-  "kv_namespaces": [
-    {
-      "binding": "OAUTH_KV",
-      "id": "<Enter your KV ID here>"
-    }
-  ],
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "OAUTH_KV",
+  //     "id": "<Enter your KV ID here>"
+  //   }
+  // ],
   // These were in the Cloudflare-provided examples, disabling for now
   // "ai": {
   // 	"binding": "AI"
