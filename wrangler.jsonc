@@ -37,5 +37,9 @@
   // },
   "dev": {
     "port": 8788
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
   }
 }
