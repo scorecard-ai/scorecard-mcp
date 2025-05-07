@@ -13,7 +13,7 @@ import type {
 
 import type { UserProps } from "./types";
 
-const CLERK_SCOPE = "openid email profile private_metadata public_metadata";
+const CLERK_SCOPE = "openid";
 
 type ClerkAuthRequest = {
   mcpAuthRequest: AuthRequest;
