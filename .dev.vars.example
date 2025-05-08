@@ -3,4 +3,3 @@ CLERK_CLIENT_ID=<from clerk dashboard>
 CLERK_CLIENT_SECRET=<generated in clerk dashboard>
 CLERK_DOMAIN=clerk.getscorecard.ai
 CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZ2V0c2NvcmVjYXJkLmFpJA
-COOKIE_ENCRYPTION_KEY=<randomly generate this>
