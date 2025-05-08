@@ -51,9 +51,15 @@ Restart Claude and you should see the tools become available.
 
 ## Local Development
 
-Create file ".dev.vars" and add:
+Create file ".dev.vars" and fill in the missing values:
 ```bash
-SCORECARD_API_KEY=<API KEY FOR LOCAL TESTING>
+cp .dev.vars.example .dev.vars
 ```
+
+CLERK_CLIENT_ID - Clerk Dashboard -> Configure -> OAuth Applications
+CLERK_CLIENT_SECRET - Clerk Dashboard -> Configure -> OAuth Applications (Cannot be viewed after initial generation) 
+CLERK_DOMAIN - Clerk Dashboard -> Configure -> API Keys -> Frontend API URL. Override this with the Clerk development URL if using with local Scorecard server.
+CLERK_PUBLISHABLE_KEY - Clerk Dashboard -> Configure -> API Keys -> Publishable Key. Override this with the pk_test_* one if using with local Scorecard server.
+COOKIE_ENCRYPTION_KEY - Generate a random string to use for this
 
 Remember to run "npx wrangler types" to generate types for the env variables.
