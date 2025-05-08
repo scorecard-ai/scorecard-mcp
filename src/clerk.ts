@@ -192,7 +192,6 @@ export async function confirmConsent(
     new URL("/callback", c.req.url).href
   );
   authorizationUrl.searchParams.set("response_type", "code");
-  //authorizationUrl.searchParams.set("audience", "c.env.CLERK_CLIENT_ID");
   authorizationUrl.searchParams.set("scope", CLERK_SCOPE);
   authorizationUrl.searchParams.set(
     "code_challenge",
