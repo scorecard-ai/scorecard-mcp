@@ -1,95 +1,59 @@
-# Scorecard MCP Server on Cloudflare
+# Scorecard MCP Server
 
-This repository allows you to deploy a remote MCP server on Cloudflare Workers that enables Claude and other MCP clients to access Scorecard's evaluation tools.
+Connect Claude to Scorecard's AI evaluation platform through natural language conversations.
+Test, measure, and improve your AI systems without switching between tools.
 
-## Get started: 
+## Quick Start
 
-[![Deploy to Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/scorecard-ai/scorecard-mcp)
-
-This will deploy your Scorecard MCP server to a URL like: `scorecard-mcp.<your-account>.workers.dev/sse`
-
-Alternatively, you can clone this repository and deploy it using Wrangler:
-```bash
-git clone https://github.com/scorecard-ai/scorecard-mcp.git
-cd scorecard-mcp
-npm install
-npm run deploy
-```
-
-## About This MCP Server
-
-This MCP server provides access to Scorecard's evaluation tools directly from Claude and other MCP-compatible clients. It uses Clerk for authentication and is built on Cloudflare Workers for reliable, global deployment.
-
-The server implements the MCP specification (2025-03-26) and provides secure access to Scorecard's API for running experiments, generating synthetic data, configuring metrics, and analyzing model performance.
-
-## Connect to MCP Clients
-
-This MCP server works with various MCP-compatible clients:
-
-### Connect to claude.ai, Cursor, and Windsurf
-
-Once deployed, you can connect to your MCP server from Claude and other MCP-compatible clients by providing your server URL:
-
-```
-https://scorecard-mcp.<your-account>.workers.dev/sse
-```
-
-### Connect via Cloudflare AI Playground
-
-You can also connect through the Cloudflare AI Playground:
-
-1. Go to https://playground.ai.cloudflare.com/
-2. Enter your deployed MCP server URL (`scorecard-mcp.<your-account>.workers.dev/sse`)
-3. You can now use Scorecard's evaluation tools directly from the playground!
-
-### Connect via Claude Desktop
-
-For local testing, you can connect to your MCP server from Claude Desktop by using the [mcp-remote proxy](https://www.npmjs.com/package/mcp-remote).
-
-Follow [Anthropic's Quickstart](https://modelcontextprotocol.io/quickstart/user) and within Claude Desktop go to Settings > Developer > Edit Config.
-
-Update with this configuration:
+Add to your MCP client configuration:
 
 ```json
 {
   "mcpServers": {
     "scorecard": {
       "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://scorecard-mcp.<your-account>.workers.dev/sse"  // or http://localhost:8787/sse for local testing
-      ]
+      "args": ["mcp-remote", "https://app.scorecard.ai/sse"]
     }
   }
 }
 ```
 
-Restart Claude and you should see the tools become available. 
+You'll authenticate with your Scorecard account on first use via Clerk OAuth.
 
-## Local Development
+## What You Can Do
 
-For local development, create a ".dev.vars" file with your Clerk credentials:
-```bash
-cp .dev.vars.example .dev.vars
-```
+Ask Claude to help with AI evaluation tasks:
 
-Configure the following variables in your .dev.vars file:
+- "Create a new project for evaluating my chatbot"
+- "Set up test cases for customer service scenarios"
+- "Configure accuracy and helpfulness metrics"
+- "Run an evaluation against my latest model"
+- "Show me the performance results"
 
-| Variable | Source | Notes |
-|----------|--------|-------|
-| CLERK_CLIENT_ID | Clerk Dashboard -> Configure -> OAuth Applications | |
-| CLERK_CLIENT_SECRET | Clerk Dashboard -> Configure -> OAuth Applications | Cannot be viewed after initial generation |
-| CLERK_DOMAIN | Clerk Dashboard -> Configure -> API Keys -> Frontend API URL | Override this with the Clerk development URL if using with local Scorecard server |
-| CLERK_PUBLISHABLE_KEY | Clerk Dashboard -> Configure -> API Keys -> Publishable Key | Override this with the pk_test_* one if using with local Scorecard server |
+## Available Operations
 
-Then run the development server:
-```bash
-npm install
-npm run dev
-```
+- Projects: Create and manage evaluation projects
+- Test Sets: Build comprehensive test suites
+- Test Cases: Add and organize individual test scenarios
+- Metrics: Configure custom evaluation criteria
+- Systems: Manage AI system configurations and versions
+- Runs: Execute evaluations and analyze results
 
-Remember to run `npx wrangler types` to generate types for the environment variables.
+## Technical Details
 
-## Contributors
+Built using the https://modelcontextprotocol.io/specification/2025-06-18/changelog on
+Scorecard's Next.js frontend:
+- Clerk OAuth for secure authentication
+- JWT tokens passed to Scorecard's backend
+- Auto-generated MCP tools from OpenAPI spec
+- Deployed on Vercel's edge infrastructure
 
-Special thanks to Dustin Moore for his engineering leadership in developing this MCP implementation.
+## Security
+
+- OAuth 2.0 authentication through Clerk
+- Access limited to your authenticated Scorecard account
+- Tokens passed through but never stored
+
+---
+Transform Scorecard into a conversational AI evaluation assistant - comprehensive model
+testing through natural conversation.
