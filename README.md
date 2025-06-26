@@ -12,7 +12,7 @@ Add to your MCP client configuration:
   "mcpServers": {
     "scorecard": {
       "command": "npx",
-      "args": ["mcp-remote", "https://app.scorecard.ai/sse"]
+      "args": ["mcp-remote", "https://app.scorecard.io/api/mcp"]
     }
   }
 }
