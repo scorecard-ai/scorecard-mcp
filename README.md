@@ -92,4 +92,4 @@ Remember to run `npx wrangler types` to generate types for the environment varia
 
 ## Contributors
 
-Special thanks to Dustin Moore for his engineering leadership in developing this MCP implementation.
+Special thanks to [Dustin Moore](https://www.linkedin.com/in/dustin-moore-a1392792/) for his engineering leadership in developing this MCP implementation.
