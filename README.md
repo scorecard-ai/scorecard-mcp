@@ -57,3 +57,5 @@ Scorecard's Next.js frontend:
 ---
 Transform Scorecard into a conversational AI evaluation assistant - comprehensive model
 testing through natural conversation.
+
+Special thanks to [Dustin Moore](https://www.linkedin.com/in/dustin-moore-a1392792/) for his engineering leadership in developing this MCP implementation.
