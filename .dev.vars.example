@@ -1,0 +1,5 @@
+NODE_ENV=development
+CLERK_CLIENT_ID=<from clerk dashboard>
+CLERK_CLIENT_SECRET=<generated in clerk dashboard>
+CLERK_DOMAIN=clerk.scorecard.io
+CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZ2V0c2NvcmVjYXJkLmFpJA
