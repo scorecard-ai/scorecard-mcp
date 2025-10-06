@@ -1,0 +1,39 @@
+{
+  "name": "@scorecard/remote-mcp",
+  "version": "1.0.0",
+  "description": "The remote MCP server for the Scorecard application",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "license": "Elastic-2.0 OR AGPL-3.0-only",
+  "scripts": {
+    "dev": "tsx watch --import ./src/instrument.ts src/index.ts",
+    "build": "tsc && pnpm sentry:sourcemaps",
+    "start": "node --import ./dist/instrument.js ./dist/index.js",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org scorecard --project mcp ./dist && sentry-cli sourcemaps upload --org scorecard --project mcp ./dist",
+    "format:check": "prettier --check .",
+    "format:write": "prettier --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clerk/express": "^1.7.30",
+    "@clerk/mcp-tools": "^0.3.1",
+    "@sentry/cli": "^2.53.0",
+    "@sentry/node": "^10.11.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "scorecard-ai-mcp": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.3.1",
+    "prettier": "^3.5.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

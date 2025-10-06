@@ -1,24 +1,21 @@
-# Scorecard MCP Server
+# Scorecard remote MCP server
 
 Connect Claude to Scorecard's AI evaluation platform through natural language conversations.
 Test, measure, and improve your AI systems without switching between tools.
 
-## Quick Start
+## Installation
 
-Add to your MCP client configuration:
+Add the Scorecard MCP server's remote URL `https://mcp.scorecard.io/mcp` to your MCP client, e.g. Claude or Cursor.
 
-```json
-{
-  "mcpServers": {
-    "scorecard": {
-      "command": "npx",
-      "args": ["mcp-remote", "https://app.scorecard.io/api/mcp"]
-    }
-  }
-}
-```
+See the [full setup instructions](https://docs.scorecard.io/features/mcp) for more info and local installation configuration.
 
-You'll authenticate with your Scorecard account on first use via Clerk OAuth.
+## Technical Architecture
+
+This remote MCP server implements the latest version of the [Model Context Protocol server specification](https://modelcontextprotocol.io/docs/learn/server-concepts). It is built with:
+
+- **[Clerk](https://clerk.com)** for authentication, implementing the [OAuth 2.0 Protected Resource Metadata](https://www.rfc-editor.org/rfc/rfc8414) specification for secure, standards-compliant authentication flows.
+- **[Stainless](https://stainless.com/)** for auto-generated, type-safe MCP endpoints that stay in sync with the API specification.
+- **[Sentry](https://sentry.io)** for production-grade monitoring, error tracking, and performance insights.
 
 ## What You Can Do
 
@@ -29,33 +26,3 @@ Ask Claude to help with AI evaluation tasks:
 - "Configure accuracy and helpfulness metrics"
 - "Run an evaluation against my latest model"
 - "Show me the performance results"
-
-## Available Operations
-
-- Projects: Create and manage evaluation projects
-- Test Sets: Build comprehensive test suites
-- Test Cases: Add and organize individual test scenarios
-- Metrics: Configure custom evaluation criteria
-- Systems: Manage AI system configurations and versions
-- Runs: Execute evaluations and analyze results
-
-## Technical Details
-
-Built using the https://modelcontextprotocol.io/specification/2025-06-18/changelog on
-Scorecard's Next.js frontend:
-- Clerk OAuth for secure authentication
-- JWT tokens passed to Scorecard's backend
-- Auto-generated MCP tools from OpenAPI spec
-- Deployed on Vercel's edge infrastructure
-
-## Security
-
-- OAuth 2.0 authentication through Clerk
-- Access limited to your authenticated Scorecard account
-- Tokens passed through but never stored
-
----
-Transform Scorecard into a conversational AI evaluation assistant - comprehensive model
-testing through natural conversation.
-
-Special thanks to [Dustin Moore](https://www.linkedin.com/in/dustin-moore-a1392792/) for his engineering leadership in developing this MCP implementation.

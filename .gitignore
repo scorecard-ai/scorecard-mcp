@@ -11,6 +11,7 @@ dist/
 # Environment variables
 .env
 .env.local
+.sentryclirc
 
 # Editor files
 .vscode/
